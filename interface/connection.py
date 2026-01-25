@@ -39,7 +39,10 @@ class deviceControl:  # 交换机登陆模块
                 self.ssh = paramiko.SSHClient()
                 policy = paramiko.AutoAddPolicy()
                 self.ssh.set_missing_host_key_policy(policy)
-                self.ssh.connect(self.ip, self.port, self.username, self.password, timeout=200)
+                self.ssh.connect(self.ip, self.port, self.username, self.password,
+                                 auth_timeout=10,  # 验证超时
+                                 channel_timeout=10,  # 通道超时
+                                 banner_timeout=10)  # 标题栏超时
                 self.ssh_shell = self.ssh.invoke_shell()  # 使用invoke是为了可以执行多条命令
                 self.ssh_shell.settimeout(1)  # tunnel超时
                 return True

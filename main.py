@@ -3,6 +3,7 @@
 from interface import excel, logg, autoThreadingPool, init, set_value, get_value, readTxt
 import platform, time
 from alive_progress import alive_bar
+import os
 
 
 # import encodings.idna  # 解决python3.9 LookupError: unknown encoding: idna socket.gethostbyname(destination)
@@ -35,6 +36,30 @@ def funcAction(user, passwd, fileName, logName, func, worker=30):  # 主模块
         for readCell in read_info:
             readCell.insert(0, password)
             readCell.insert(0, username)
+        bar(0.1)
+        logger.get_log().info('%s 载入线程...' % func.__name__)
+        my_poll = autoThreadingPool(int(worker))
+        result = my_poll(func, read_info)
+        logger.get_log().info('线程结束,准备写入本地...')
+        bar(1)
+        return result
+
+
+def funcAction1(fileName, logName, func, worker=30):  # 主模块
+    global Rlock_local, logger, bar  # 锁，日志，进度条
+    with alive_bar(title='Progress', bar='filling', spinner='waves2', unknown='wait', manual=True) as bar:  # 进度条
+        init()  # 初始化全局变量
+        set_value('logger', logg(logName, 'log/%s' % logName))
+        set_value('bar', bar)
+        logger = get_value('logger')
+        bar = get_value('bar')
+        file_dir = 'read/config'
+        all_items = os.listdir(file_dir)
+        read_info = []
+        for item in all_items:
+            read_info.append('read/config/%s'%item)
+        # print(read_info)
+        logger.get_log().info('当前运行环境:%s %s %s' % (platform.system(), platform.version(), platform.machine()))
         bar(0.1)
         logger.get_log().info('%s 载入线程...' % func.__name__)
         my_poll = autoThreadingPool(int(worker))
@@ -88,15 +113,15 @@ def platform_select():  # 判断当前运行环境
 
 
 def start_action():  # windows功能入口
-    print('release:v1.8.0')
+    print('release:v1.8.2')
     print(
         '程序功能如下：\n'
-        '1.配置检查（根据keyWords.txt里的关键字）\n'
-        '2.获取设备状态信息（运行时间，版本，补丁，端口状态等）\n'
-        '3.下发配置\n'
-        '4.获取所有配置（current-configuration）\n'
-        '5.zabbix监控项导入\n'
-        '6.配置采集（根据keyWords.txt里的正则表达式匹配）')
+        '1.登陆配置检查（根据keyWords.txt里的关键字）\n'
+        '2.已获得配置文件检查\n')
+        # '3.下发配置\n'
+        # '4.获取所有配置（current-configuration）\n'
+        # '5.zabbix监控项导入\n'
+        # '6.配置采集（根据keyWords.txt里的正则表达式匹配）')
     while True:
         if 'Linux' in platform.system():
             import sys
@@ -119,73 +144,19 @@ def start_action():  # windows功能入口
             data = funcAction(username, password, fileName, savename, deviceCheck, worker)
             writeToExcel(savename, title, data)
             break
-        elif functionSelect == '3':
+        if functionSelect == '2':  # 配置比对
             fileName = 'devices_ip.xlsx'
-            title = ['IP', 'Description', 'PingStatus(ms)', 'accessMode', 'result']  # 保存的sheet标题
-            savename = 'sendcmd'
-            print('1.确认IP等信息已填入read\devices_ip.xlsx')
-            print('输入账户密码')
-            from sendCmd import sendConfig
-            username, password, worker = platform_select()
-            data = funcAction(username, password, fileName, savename, sendConfig, worker)
-            writeToExcel(savename, title, data)
-            break
-        elif functionSelect == '2':
-            fileName = 'devices_ip.xlsx'
-            title = ['IP', 'Description', 'PingStatus(ms)', 'accessMode', 'ciName', 'model',
-                     'Uptime(days)', 'Version', 'Patch', 'HardwareHealth', 'ErrorPorts', 'Duplex(not full Ports)',
-                     'traffic(>60%)', 'portBandwidth(10m&100m)']  # 保存的sheet标题
-            savename = 'checkStatus'
-            print('1).确认IP等信息已填入read\devices_ip.xlsx')
-            print('输入账户,密码,线程数')
-            from checkStatus import StatusCheck
-            username, password, worker = platform_select()
-            data = funcAction(username, password, fileName, savename, StatusCheck, worker)
-            writeToExcel(savename, title, data)
-            break
-        elif functionSelect == '4':
-            fileName = 'devices_ip.xlsx'
-            logname = 'downloadConfig'
-            print('1).确认IP等信息已填入read\devices_ip.xlsx')
-            print('输入账户密码')
-            from downloadConfig import downloadConfig
-            username, password, worker = platform_select()
-            data = funcAction(username, password, fileName, logname, downloadConfig, worker)
-            writeToTXT(data)
-            break
-        elif functionSelect == '5':
-            import zabbix_tools
-            print('1).确认需要添加的信息已填入read\zabbix_host_add.xlsx')
-            print('输入zabbix账户，密码，以及服务端的url(例如：http://IP:端口)')
-            username, passowrd, worker = platform_select()
-            zbx_url = input('zabbix_url:')
-            filename = 'read/zabbix_host_add.xlsx'
-            zabbix_tools.create_start_main(filename, zbx_url, username, passowrd)
-            break
-        elif functionSelect == 'test111':
-            from checkAC import wlanaccessCheck
-            fileName = 'devices_ip.xlsx'
-            title = ['IP', 'Description', 'PingStatus(ms)', 'accessMode', 'user-group auth acl3010',
-                     'vlan8** wlanaccess2.0_in']  # 保存的sheet标题
-            savename = 'checkAcTrafiicPolicy'
-            username, password, worker = platform_select()
-            data = funcAction(username, password, fileName, savename, wlanaccessCheck, worker)
-            writeToExcel(savename, title, data)
-            break
-        elif functionSelect == '6':
-            fileName = 'devices_ip.xlsx'
-            title = ['IP', 'Description', 'PingStatus(ms)', 'accessMode']  # 保存的sheet标题
+            title = ['IP']  # 保存的sheet标题
             readInfo = readTxt('read/keyWords.txt')  # 读取匹配关键字用作title
             for i in readInfo:  # 更新title
-                if i.split(',')[2] not in title:
-                    title.append(i.split(',')[2])
-            savename = 'collectConfig'
-            print('1).确认IP等信息已填入read\devices_ip.xlsx\n'
-                  '2).确认采集关键字已填入read\keyWords.txt\n'
+                if i.split(',')[1] not in title:
+                    title.append(i.split(',')[1])
+            savename = 'compareResult'
+            print('1).需要比对的read\devices_ip.xlsx\n'
+                  '2).确认检查关键字已填入read\keyWords.txt\n'
                   '3).输入账户,密码')
-            from collectConfig import checkWithRe
-            username, password, worker = platform_select()
-            data = funcAction(username, password, fileName, savename, checkWithRe, worker)
+            from cfgCheck import deviceCheck
+            data = funcAction1(fileName, savename, deviceCheck, 10)
             writeToExcel(savename, title, data)
             break
         else:

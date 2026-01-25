@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
-from interface import deviceContrl_auto, ping_check, get_value, revData_error, readTxt
+from interface import deviceControl_auto, ping_check, get_value, revData_error, readTxt
 import re
 
 
@@ -42,7 +42,7 @@ def deviceCheck(arg=[]):  # 配置检查
     device_pass = arg[1]
     des_local = arg[3]
     logger = get_value('logger')
-    conn = deviceContrl_auto(device_ip, device_user, device_pass)  # 登陆
+    conn = deviceControl_auto(device_ip, device_user, device_pass)  # 登陆
     cmd = ['dis current-configuration']  # 命令
     result = [device_ip, des_local]
     pingDelay = ping_check(device_ip)[0]  # ping检测
