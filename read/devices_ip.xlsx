@@ -1,1 +1,2 @@
-IP	des
+IP	des	cmds
+127.0.0.1	本机	"display version,display clock"

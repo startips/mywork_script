@@ -57,8 +57,7 @@ def funcAction1(fileName, logName, func, worker=30):  # 主模块
         all_items = os.listdir(file_dir)
         read_info = []
         for item in all_items:
-            read_info.append('read/config/%s'%item)
-        # print(read_info)
+            read_info.append('read/config/%s' % item)
         logger.get_log().info('当前运行环境:%s %s %s' % (platform.system(), platform.version(), platform.machine()))
         bar(0.1)
         logger.get_log().info('%s 载入线程...' % func.__name__)
@@ -98,14 +97,14 @@ def writeToTXT(data):  # 写入数据到TXT
 def platform_select():  # 判断当前运行环境
     username = ''
     password = ''
-    worker = 60
+    worker = os.cpu_count()
     if 'Windows' in platform.system():
         from interface import passwdinput
         username = input('用户:')
         password = passwdinput('密码:')
     elif 'Linux' in platform.system():
         import sys
-        username, password, worker = sys.argv[1], sys.argv[2], sys.argv[4]
+        username, password = sys.argv[1], sys.argv[2]
     else:
         print(platform.system(), platform.version(), platform.machine())
         print('当前运行环境不支持')
@@ -117,11 +116,11 @@ def start_action():  # windows功能入口
     print(
         '程序功能如下：\n'
         '1.登陆配置检查（根据keyWords.txt里的关键字）\n'
-        '2.已获得配置文件检查\n')
-        # '3.下发配置\n'
-        # '4.获取所有配置（current-configuration）\n'
-        # '5.zabbix监控项导入\n'
-        # '6.配置采集（根据keyWords.txt里的正则表达式匹配）')
+        '2.已获得配置文件检查\n'
+        '3.下发配置\n')
+    # '4.获取所有配置（current-configuration）\n'
+    # '5.zabbix监控项导入\n'
+    # '6.配置采集（根据keyWords.txt里的正则表达式匹配）')
     while True:
         if 'Linux' in platform.system():
             import sys
@@ -152,11 +151,19 @@ def start_action():  # windows功能入口
                 if i.split(',')[1] not in title:
                     title.append(i.split(',')[1])
             savename = 'compareResult'
-            print('1).需要比对的read\devices_ip.xlsx\n'
-                  '2).确认检查关键字已填入read\keyWords.txt\n'
-                  '3).输入账户,密码')
             from cfgCheck import deviceCheck
             data = funcAction1(fileName, savename, deviceCheck, 10)
+            writeToExcel(savename, title, data)
+            break
+        if functionSelect == '3':
+            fileName = 'devices_ip.xlsx'
+            title = ['IP', 'Description', 'PingStatus(ms)', 'accessMode']  # 保存的sheet标题
+            savename = 'sendCmd'
+            print('1).确认IP等信息已填入read\devices_ip.xlsx\n'
+                  '3).输入账户,密码')
+            from sendCmd import deviceSend
+            username, password, worker = platform_select()
+            data = funcAction(username, password, fileName, savename, deviceSend, worker)
             writeToExcel(savename, title, data)
             break
         else:

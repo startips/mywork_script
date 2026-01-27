@@ -1,13 +1,19 @@
-### 0不需要此配置，1需要此配置,3仅匹配,4自定义
-Version 1.24.0.1 \(\S+ V300R024C00SPC500\),版本,1
-Patch Package Version :V300R024SPH186,补丁,1
-State\s+\: Backup|Master,Mlag状态检查,1
-Heart beat state\s+\:\s+OK,Mlag状态检查,1
-CPU\s+\d+%\s+\d+%\s+\d+%\s+\d+%,CPU,3
-Next startup saved-configuration file\:\s+flash\:\/\S+,启动配置文件,3
+###1需要此配置,2仅匹配,3自定义
+#
+########################################状态检查#############################
+自定义,版本,3
+自定义,补丁,3
+自定义,多余文件检查,3
+自定义,硬件状态检查,3
+自定义,未关闭端口,3
+自定义,bgp邻居状态,3
+自定义,feature-software状态,3
+自定义,失败命令配置检查,3
+########################################配置检查#############################
 pki realm default,pki配置,1
 undo ftp server source all-interface\s*\n\s*undo ftp ipv6 server source all-interface,关闭FTP配置,1
-dfs-group 1\n\s+authentication-mode hmac-sha256 password \S+\n\s+dual-active detection source ip \S+ vpn-instance DAD peer \S+\s*\n\s+m-lag up-delay 90\s*\n\s+priority 1[25]0,dfs-group配置,1
+dfs-group 1\n\s+authentication-mode hmac-sha256 password \S+\n\s+dual-active detection source ip \S+ vpn-instance DAD peer \S+\s*\n\s+m-lag up-delay 90\s*\n\s+priority 1[25]0,mlag状态&配置(leaf),1
+Heart beat state\s+\:\s+OK\s*\n\s*Node [12][\s\S]*?State\s+\:\s+(:?Backup|Master)[\s\S]*?Node [12][\s\S]*?State\s+\:\s+(:?Backup|Master),mlag状态&配置(Leaf),1
 system resource large-route,大路由配置,1
 ntp server source-interface all disable\s*\n\s*ntp ipv6 server source-interface all disable,NTP配置,1
 vlan batch,全局vlan配置,1
@@ -15,7 +21,7 @@ mac-address flapping detection security-level low\s*\n\s*mac-address flapping pe
 stp bridge-address \d{4}-\d{4}-\d{4}\s*\n\s*stp mode rstp\s*\n\s*stp v-stp enable\s*\n\s*stp instance 0 root primary\s*\n\s*stp bpdu-protection\s*\n\s*stp tc-protection,STP配置,1
 arp ip-conflict-detect enable,arp冲突配置,1
 telnet server disable\s*\n\s*telnet ipv6 server disable\s*\n\s*undo telnet server-source all-interface\s*\n\s*undo telnet ipv6 server-source all-interface,telnet关闭配置,1
-ip vpn-instance DAD\s*\n\s*ipv4-family\s*\n\s*#\s*\n\s*ip vpn-instance OOB\s*\n\s*ipv4-family\s*\n\s*route-distinguisher 200:1,vpn实例配置(Spine),1
+ip vpn-instance OOB\s*\n\s*ipv4-family\s*\n\s*route-distinguisher 200:1,vpn实例配置(Spine),1
 ip vpn-instance DAD\s*\n\s*ipv4-family\s*\n\s*#\s*\n\s*ip vpn-instance OOB\s*\n\s*ipv4-family\s*\n\s*route-distinguisher 200:1,vpn实例配置(Leaf),1
 aaa\n authentication-scheme default\n  authentication-mode local\n authorization-scheme default\n  authorization-mode local\n accounting-scheme default\n  accounting-mode none\n local-aaa-user password policy administrator\n  password history record number 0\n  password alert before-expire 0\n  undo password alert original\n  password expire 0\n domain default\n  authentication-scheme default\n  accounting-scheme default\n domain default_admin\n  authentication-scheme default\n  accounting-scheme default\n local-aaa-user user-name complexity-check disable\n local-user admin password irreversible-cipher \S+\n local-user admin password-force-change disable\n local-user admin privilege level 3\n local-user admin service-type terminal ssh\n local-user nmsuser password irreversible-cipher \S+\n local-user nmsuser password-force-change disable\n local-user nmsuser privilege level 1\n local-user nmsuser service-type terminal ssh,aaa配置,1
 bgp\s+\d+\n\s+router-id\s+\S+\n timer keepalive 30 hold 90\n advertise lowest-priority all-address-family peer-up delay 120\n private-4-byte-as disable\n group \S+ external\n peer \S+ as-number \d+[\s\S]*? group \S+ external\n peer \S+ as-number \d+[\s\S]*?ipv4-family unicast\n  network \d+.\d+.\d+.\d+ \d+.\d+.\d+.\d+[\s\S]*?maximum load-balancing 32\n  peer \S+ enable\n  peer \S+ route-policy \S+ export\n  peer \S+ advertise-community\n  peer \S+ route-update-interval 0[\s\S]*?peer \S+ enable\n  peer \S+ advertise-community\n  peer \S+ route-update-interval 0[\s\S]*?route-policy \S+ permit node 10\n apply as-path \d+ overwrite,BGP配置(Spine),1
@@ -25,3 +31,13 @@ lldp enable,LLDP配置,1
 stelnet server enable\nssh server rsa-key min-length 3072\nssh server-source all-interface\nundo ssh ipv6 server-source all-interface\nssh authorization-type default aaa\n#\nssh server cipher aes256_gcm aes128_gcm aes256_ctr aes192_ctr aes128_ctr aes256_cbc aes192_cbc aes128_cbc arcfour256 arcfour128 3des_cbc blowfish_cbc des_cbc\nssh server hmac sha2_512 sha2_256_96 sha2_256 sha1 sha1_96 md5 md5_96\nssh server key-exchange dh_group_exchange_sha256 dh_group_exchange_sha1 dh_group14_sha1 dh_group1_sha1 ecdh_sha2_nistp256 ecdh_sha2_nistp384 ecdh_sha2_nistp521 sm2_kep dh_group16_sha512 curve25519_sha256\n#\nssh server publickey dsa ecc rsa rsa_sha2_256 rsa_sha2_512\n#\nssh server dh-exchange min-len 2048\n#\nssh client publickey ecc rsa_sha2_256 rsa_sha2_512\n#\nssh client cipher aes256_gcm aes128_gcm aes256_ctr aes192_ctr aes128_ctr\nssh client hmac sha2_512 sha2_256\nssh client key-exchange dh_group_exchange_sha256 dh_group16_sha512,ssh配置,1
 command-privilege level 1 view shell dir\ncommand-privilege level 1 view global display\ncommand-privilege level 1 view shell save\ncommand-privilege level 1 view shell screen-length,cmd权限配置,1
 user-interface maximum-vty 21\n#\nuser-interface con 0\n authentication-mode password\n set authentication password cipher \S+\n idle-timeout 10 0\n#\nuser-interface vty 0 20\n authentication-mode aaa\n user privilege level 3\n protocol inbound ssh,user-interface配置,1
+load-balance ecmp\s*\n\s*hashmode 2,hash配置,1
+interface MEth\S+\s*\n\s*description Out-Of-OOB\s*\n\s*ip binding vpn-instance OOB\s*\n\s*ip address \d+\.\d+\.\d+\.\d+ 255.255.255.0,带外接口配置,1
+interface LoopBack1\s*\n\s*description \S+\s*\n\s*ip address \d+\.\d+\.\d+\.\d+ 255.255.255.255,loolback配置(Spine),1
+interface Eth-Trunk100\s*\n\s*description To_\S+_Eth-Trunk100\s*\n\s*mode lacp-static\s*\n\s*peer-link 1,peerlink配置(Leaf),1
+interface 100GE1/0/3\s*\n\s*description To_\S+_100GE1/0/3\s*\n\s*eth-trunk 100,peerlink配置(Leaf),1
+interface 100GE1/0/7\s*\n\s*description To_\S+_100GE1/0/7\s*\n\s*eth-trunk 100,peerlink配置(Leaf),1
+interface Eth-Trunk101\s*\n\s*undo portswitch\s*\n\s*description To_\S+_Eth-Trunk101\s*\n\s*ip binding vpn-instance DAD\s*\n\s*ip address \d+\.\d+\.\d+\.\d+ 255.255.255.252\s*\n\s*mode lacp-static\s*\n\s*m-lag unpaired-port reserved,DAD配置(Leaf),1
+interface 25GE1/0/46\s*\n\s*description To_\S+_25GE1/0/46\s*\n\s*eth-trunk 101,DAD配置(Leaf),1
+interface 25GE1/0/47\s*\n\s*description To_\S+_25GE1/0/47\s*\n\s*eth-trunk 101,DAD配置(Leaf),1
+monitor-link group 1\s*\n\s*port 100GE1/0/1 uplink\s*\n\s*port 100GE1/0/2 uplink\s*\n\s*port 100GE1/0/5 uplink\s*\n\s*port 100GE1/0/6 uplink\s*\n\s*port 25GE1/0/1 downlink 1\s*\n\s*port 25GE1/0/2 downlink 2\s*\n\s*port 25GE1/0/3 downlink 3\s*\n\s*port 25GE1/0/4 downlink 4\s*\n\s*port 25GE1/0/5 downlink 5\s*\n\s*port 25GE1/0/6 downlink 6\s*\n\s*port 25GE1/0/7 downlink 7\s*\n\s*port 25GE1/0/8 downlink 8\s*\n\s*port 25GE1/0/9 downlink 9\s*\n\s*port 25GE1/0/10 downlink 10\s*\n\s*port 25GE1/0/11 downlink 11\s*\n\s*port 25GE1/0/12 downlink 12\s*\n\s*port 25GE1/0/13 downlink 13\s*\n\s*port 25GE1/0/14 downlink 14\s*\n\s*port 25GE1/0/15 downlink 15\s*\n\s*port 25GE1/0/16 downlink 16\s*\n\s*port 25GE1/0/17 downlink 17\s*\n\s*port 25GE1/0/18 downlink 18\s*\n\s*port 25GE1/0/19 downlink 19\s*\n\s*port 25GE1/0/20 downlink 20\s*\n\s*port 25GE1/0/21 downlink 21\s*\n\s*port 25GE1/0/22 downlink 22\s*\n\s*port 25GE1/0/23 downlink 23\s*\n\s*port 25GE1/0/24 downlink 24\s*\n\s*port 25GE1/0/25 downlink 25\s*\n\s*port 25GE1/0/26 downlink 26\s*\n\s*port 25GE1/0/27 downlink 27\s*\n\s*port 25GE1/0/28 downlink 28\s*\n\s*port 25GE1/0/29 downlink 29\s*\n\s*port 25GE1/0/30 downlink 30\s*\n\s*port 25GE1/0/31 downlink 31\s*\n\s*port 25GE1/0/32 downlink 32\s*\n\s*port 25GE1/0/33 downlink 33\s*\n\s*port 25GE1/0/34 downlink 34\s*\n\s*port 25GE1/0/35 downlink 35\s*\n\s*port 25GE1/0/36 downlink 36\s*\n\s*port 25GE1/0/37 downlink 37\s*\n\s*port 25GE1/0/38 downlink 38\s*\n\s*port 25GE1/0/39 downlink 39\s*\n\s*port 25GE1/0/40 downlink 40\s*\n\s*port 25GE1/0/41 downlink 41\s*\n\s*port 25GE1/0/42 downlink 42\s*\n\s*port 25GE1/0/43 downlink 43\s*\n\s*port 25GE1/0/44 downlink 44\s*\n\s*port 25GE1/0/45 downlink 45\s*\n\s*port 25GE1/0/48 downlink 48\s*\n\s*timer recover-time 40,monitor-link配置(Leaf),1
