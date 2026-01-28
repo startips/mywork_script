@@ -142,7 +142,6 @@ def deviceCheck(arg=[]):  # 根据文件名读取配置
     logger.get_log().info('%s 执行完成' % filename)
     return result
 
-
 if __name__ == '__main__':
     pass
     # c = {}
