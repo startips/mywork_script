@@ -2,12 +2,11 @@
 # -*- coding: utf-8 -*-
 import getpass
 import re
-
-from cfgCheck import infoFormat
 from interface import excel, logg, autoThreadingPool, init, set_value, get_value, readTxt
 import platform, time
 from alive_progress import alive_bar
 import os
+import pprint
 
 
 # import encodings.idna  # 解决python3.9 LookupError: unknown encoding: idna socket.gethostbyname(destination)
@@ -49,7 +48,7 @@ def funcAction(user, passwd, fileName, logName, func, worker=30):  # 主模块
         return result
 
 
-def funcAction1(fileName, logName, func, worker=30):  # 主模块
+def funcAction1(data, logName, func, worker=30):  # 主模块
     global Rlock_local, logger, bar  # 锁，日志，进度条
     with alive_bar(title='Progress', bar='filling', spinner='waves2', unknown='wait', manual=True) as bar:  # 进度条
         init()  # 初始化全局变量
@@ -57,16 +56,11 @@ def funcAction1(fileName, logName, func, worker=30):  # 主模块
         set_value('bar', bar)
         logger = get_value('logger')
         bar = get_value('bar')
-        file_dir = 'read/config'
-        all_items = os.listdir(file_dir)
-        read_info = []
-        for item in all_items:
-            read_info.append('read/config/%s' % item)
         logger.get_log().info('当前运行环境:%s %s %s' % (platform.system(), platform.version(), platform.machine()))
         bar(0.1)
         logger.get_log().info('%s 载入线程...' % func.__name__)
         my_poll = autoThreadingPool(int(worker))
-        result = my_poll(func, read_info)
+        result = my_poll(func, data)
         logger.get_log().info('线程结束,准备写入本地...')
         bar(1)
         return result
@@ -77,8 +71,12 @@ def oringinDataFormat():  # 原始数据分类
     all_items = os.listdir(file_dir)
     read_info = []
     for item in all_items:
-        name = re.replace('.txt', '').replace('.log', '')
-        read_info.append()
+        name = item.replace('.txt', '').replace('.log', '')
+        returnStr = returntype(name)
+        returnStr.update({'name': name, 'filename': item})
+        read_info.append(returnStr)
+    # pprint.pprint(read_info)
+    return read_info
 
 
 def returntype(name):  # 确定设备类型以及检查项
@@ -92,8 +90,9 @@ def returntype(name):  # 确定设备类型以及检查项
                                                  'feature-software状态': 1,
                                                  '失败命令配置检查': 1,
                                                  'pki配置': 1,
-                                                 'mlag状态': 1,
-                                                 'mlag配置': 1,
+                                                 '关闭FTP配置':1,
+                                                 'mlag状态': 0,
+                                                 'mlag配置': 0,
                                                  '大路由配置': 1,
                                                  'NTP配置': 1,
                                                  '全局vlan配置': 1,
@@ -111,10 +110,10 @@ def returntype(name):  # 确定设备类型以及检查项
                                                  'user-interface配置': 1,
                                                  'hash配置': 1,
                                                  '带外接口配置': 1,
-                                                 'loolback配置': 1,
-                                                 'peerlink配置': 1,
-                                                 'DAD配置': 1,
-                                                 'monitor-link配置': 1,
+                                                 'loopback配置': 1,
+                                                 'peerlink配置': 0,
+                                                 'DAD配置': 0,
+                                                 'monitor-link配置': 0,
                                                  }}
     elif re.search(r'-LF\d+_(A|B|C|D)', name, flags=re.I):
         return {'type': 'Leaf', 'checkOption': {'版本': 1,
@@ -126,6 +125,7 @@ def returntype(name):  # 确定设备类型以及检查项
                                                 'feature-software状态': 1,
                                                 '失败命令配置检查': 1,
                                                 'pki配置': 1,
+                                                '关闭FTP配置': 1,
                                                 'mlag状态': 1,
                                                 'mlag配置': 1,
                                                 '大路由配置': 1,
@@ -143,9 +143,9 @@ def returntype(name):  # 确定设备类型以及检查项
                                                 'ssh配置': 1,
                                                 'cmd权限配置': 1,
                                                 'user-interface配置': 1,
-                                                'hash配置': 1,
+                                                'hash配置': 0,
                                                 '带外接口配置': 1,
-                                                'loolback配置': 1,
+                                                'loopback配置': 0,
                                                 'peerlink配置': 1,
                                                 'DAD配置': 1,
                                                 'monitor-link配置': 1,
@@ -160,6 +160,7 @@ def returntype(name):  # 确定设备类型以及检查项
                                                'feature-software状态': 1,
                                                '失败命令配置检查': 1,
                                                'pki配置': 1,
+                                               '关闭FTP配置': 1,
                                                'mlag状态': 1,
                                                'mlag配置': 1,
                                                '大路由配置': 1,
@@ -179,7 +180,7 @@ def returntype(name):  # 确定设备类型以及检查项
                                                'user-interface配置': 1,
                                                'hash配置': 1,
                                                '带外接口配置': 1,
-                                               'loolback配置': 1,
+                                               'loopback配置': 1,
                                                'peerlink配置': 1,
                                                'DAD配置': 1,
                                                'monitor-link配置': 1,
@@ -194,6 +195,7 @@ def returntype(name):  # 确定设备类型以及检查项
                                               'feature-software状态': 1,
                                               '失败命令配置检查': 1,
                                               'pki配置': 1,
+                                              '关闭FTP配置': 1,
                                               'mlag状态': 1,
                                               'mlag配置': 1,
                                               '大路由配置': 1,
@@ -211,9 +213,9 @@ def returntype(name):  # 确定设备类型以及检查项
                                               'ssh配置': 1,
                                               'cmd权限配置': 1,
                                               'user-interface配置': 1,
-                                              'hash配置': 1,
+                                              'hash配置': 0,
                                               '带外接口配置': 1,
-                                              'loolback配置': 1,
+                                              'loopback配置': 1,
                                               'peerlink配置': 1,
                                               'DAD配置': 1,
                                               'monitor-link配置': 1,
@@ -228,6 +230,7 @@ def returntype(name):  # 确定设备类型以及检查项
                                               'feature-software状态': 1,
                                               '失败命令配置检查': 1,
                                               'pki配置': 1,
+                                              '关闭FTP配置': 1,
                                               'mlag状态': 1,
                                               'mlag配置': 1,
                                               '大路由配置': 1,
@@ -247,7 +250,7 @@ def returntype(name):  # 确定设备类型以及检查项
                                               'user-interface配置': 1,
                                               'hash配置': 1,
                                               '带外接口配置': 1,
-                                              'loolback配置': 1,
+                                              'loopback配置': 1,
                                               'peerlink配置': 1,
                                               'DAD配置': 1,
                                               'monitor-link配置': 1,
@@ -262,6 +265,7 @@ def returntype(name):  # 确定设备类型以及检查项
                                                  'feature-software状态': 1,
                                                  '失败命令配置检查': 1,
                                                  'pki配置': 1,
+                                                 '关闭FTP配置': 1,
                                                  'mlag状态': 1,
                                                  'mlag配置': 1,
                                                  '大路由配置': 1,
@@ -281,7 +285,7 @@ def returntype(name):  # 确定设备类型以及检查项
                                                  'user-interface配置': 1,
                                                  'hash配置': 1,
                                                  '带外接口配置': 1,
-                                                 'loolback配置': 1,
+                                                 'loopback配置': 1,
                                                  'peerlink配置': 1,
                                                  'DAD配置': 1,
                                                  'monitor-link配置': 1,
@@ -296,6 +300,7 @@ def returntype(name):  # 确定设备类型以及检查项
                                                 'feature-software状态': 1,
                                                 '失败命令配置检查': 1,
                                                 'pki配置': 1,
+                                                '关闭FTP配置': 1,
                                                 'mlag状态': 1,
                                                 'mlag配置': 1,
                                                 '大路由配置': 1,
@@ -315,7 +320,7 @@ def returntype(name):  # 确定设备类型以及检查项
                                                 'user-interface配置': 1,
                                                 'hash配置': 1,
                                                 '带外接口配置': 1,
-                                                'loolback配置': 1,
+                                                'loopback配置': 1,
                                                 'peerlink配置': 1,
                                                 'DAD配置': 1,
                                                 'monitor-link配置': 1,
@@ -330,6 +335,7 @@ def returntype(name):  # 确定设备类型以及检查项
                                                'feature-software状态': 1,
                                                '失败命令配置检查': 1,
                                                'pki配置': 1,
+                                               '关闭FTP配置': 1,
                                                'mlag状态': 1,
                                                'mlag配置': 1,
                                                '大路由配置': 1,
@@ -349,7 +355,7 @@ def returntype(name):  # 确定设备类型以及检查项
                                                'user-interface配置': 1,
                                                'hash配置': 1,
                                                '带外接口配置': 1,
-                                               'loolback配置': 1,
+                                               'loopback配置': 1,
                                                'peerlink配置': 1,
                                                'DAD配置': 1,
                                                'monitor-link配置': 1,
@@ -364,6 +370,7 @@ def returntype(name):  # 确定设备类型以及检查项
                                                 'feature-software状态': 1,
                                                 '失败命令配置检查': 1,
                                                 'pki配置': 1,
+                                                '关闭FTP配置': 1,
                                                 'mlag状态': 1,
                                                 'mlag配置': 1,
                                                 '大路由配置': 1,
@@ -383,7 +390,7 @@ def returntype(name):  # 确定设备类型以及检查项
                                                 'user-interface配置': 1,
                                                 'hash配置': 1,
                                                 '带外接口配置': 1,
-                                                'loolback配置': 1,
+                                                'loopback配置': 1,
                                                 'peerlink配置': 1,
                                                 'DAD配置': 1,
                                                 'monitor-link配置': 1,
@@ -398,6 +405,7 @@ def returntype(name):  # 确定设备类型以及检查项
                                                 'feature-software状态': 1,
                                                 '失败命令配置检查': 1,
                                                 'pki配置': 1,
+                                                '关闭FTP配置': 1,
                                                 'mlag状态': 1,
                                                 'mlag配置': 1,
                                                 '大路由配置': 1,
@@ -417,7 +425,7 @@ def returntype(name):  # 确定设备类型以及检查项
                                                 'user-interface配置': 1,
                                                 'hash配置': 1,
                                                 '带外接口配置': 1,
-                                                'loolback配置': 1,
+                                                'loopback配置': 1,
                                                 'peerlink配置': 1,
                                                 'DAD配置': 1,
                                                 'monitor-link配置': 1,
@@ -432,6 +440,7 @@ def returntype(name):  # 确定设备类型以及检查项
                                               'feature-software状态': 1,
                                               '失败命令配置检查': 1,
                                               'pki配置': 1,
+                                              '关闭FTP配置': 1,
                                               'mlag状态': 1,
                                               'mlag配置': 1,
                                               '大路由配置': 1,
@@ -451,7 +460,7 @@ def returntype(name):  # 确定设备类型以及检查项
                                               'user-interface配置': 1,
                                               'hash配置': 1,
                                               '带外接口配置': 1,
-                                              'loolback配置': 1,
+                                              'loopback配置': 1,
                                               'peerlink配置': 1,
                                               'DAD配置': 1,
                                               'monitor-link配置': 1,
@@ -462,33 +471,34 @@ def returntype(name):  # 确定设备类型以及检查项
                                               '多余文件检查': 1,
                                               '硬件状态检查': 1,
                                               '未关闭端口': 1,
-                                              'bgp邻居状态': 1,
-                                              'feature-software状态': 1,
+                                              'bgp邻居状态': 0,
+                                              'feature-software状态': 0,
                                               '失败命令配置检查': 1,
                                               'pki配置': 1,
-                                              'mlag状态': 1,
-                                              'mlag配置': 1,
-                                              '大路由配置': 1,
+                                              '关闭FTP配置': 1,
+                                              'mlag状态': 0,
+                                              'mlag配置': 0,
+                                              '大路由配置': 0,
                                               'NTP配置': 1,
-                                              '全局vlan配置': 1,
+                                              '全局vlan配置': 0,
                                               'mac飘移配置': 1,
-                                              'STP配置': 1,
-                                              'arp冲突配置': 1,
+                                              'STP配置': 0,
+                                              'arp冲突配置': 0,
                                               'telnet关闭配置': 1,
                                               'vpn实例配置': 1,
                                               'aaa配置': 1,
-                                              'BGP配置': 1,
+                                              'BGP配置': 0,
                                               'snmp配置': 1,
                                               'LLDP配置': 1,
                                               'ssh配置': 1,
                                               'cmd权限配置': 1,
                                               'user-interface配置': 1,
-                                              'hash配置': 1,
+                                              'hash配置': 0,
                                               '带外接口配置': 1,
-                                              'loolback配置': 1,
-                                              'peerlink配置': 1,
-                                              'DAD配置': 1,
-                                              'monitor-link配置': 1,
+                                              'loopback配置': 0,
+                                              'peerlink配置': 0,
+                                              'DAD配置': 0,
+                                              'monitor-link配置': 0,
                                               }}
     else:
         return {'type': 'Other', 'checkOption': {'版本': 1,
@@ -500,6 +510,7 @@ def returntype(name):  # 确定设备类型以及检查项
                                                  'feature-software状态': 1,
                                                  '失败命令配置检查': 1,
                                                  'pki配置': 1,
+                                                 '关闭FTP配置': 1,
                                                  'mlag状态': 1,
                                                  'mlag配置': 1,
                                                  '大路由配置': 1,
@@ -519,7 +530,7 @@ def returntype(name):  # 确定设备类型以及检查项
                                                  'user-interface配置': 1,
                                                  'hash配置': 1,
                                                  '带外接口配置': 1,
-                                                 'loolback配置': 1,
+                                                 'loopback配置': 1,
                                                  'peerlink配置': 1,
                                                  'DAD配置': 1,
                                                  'monitor-link配置': 1,
@@ -574,7 +585,7 @@ def platform_select():  # 判断当前运行环境
 
 
 def start_action():  # windows功能入口
-    print('release:v1.8.2')
+    print('release:v1.9.1')
     print(
         '程序功能如下：\n'
         '1.登陆配置检查（根据keyWords.txt里的关键字）\n'
@@ -606,15 +617,44 @@ def start_action():  # windows功能入口
             writeToExcel(savename, title, data)
             break
         if functionSelect == '2':  # 配置比对
-            fileName = 'devices_ip.xlsx'
-            title = ['IP']  # 保存的sheet标题
-            readInfo = readTxt('read/keyWords.txt')  # 读取匹配关键字用作title
-            for i in readInfo:  # 更新title
-                if i.split(',')[1] not in title:
-                    title.append(i.split(',')[1])
+            title = ['IP',
+                     '设备类型',
+                     '版本',
+                     '补丁',
+                     '多余文件检查',
+                     '硬件状态检查',
+                     '未关闭端口',
+                     'bgp邻居状态',
+                     'feature-software状态',
+                     '失败命令配置检查',
+                     'pki配置',
+                     '关闭FTP配置',
+                     'mlag状态',
+                     'mlag配置',
+                     '大路由配置',
+                     'NTP配置',
+                     '全局vlan配置',
+                     'mac飘移配置',
+                     'STP配置',
+                     'arp冲突配置',
+                     'telnet关闭配置',
+                     'vpn实例配置',
+                     'aaa配置',
+                     'BGP配置',
+                     'snmp配置',
+                     'LLDP配置',
+                     'ssh配置',
+                     'cmd权限配置',
+                     'user-interface配置',
+                     'hash配置',
+                     '带外接口配置',
+                     'loopback配置',
+                     'peerlink配置',
+                     'DAD配置',
+                     'monitor-link配置']  # 保存的sheet标题
             savename = 'compareResult'
             from cfgCheck import deviceCheck
-            data = funcAction1(fileName, savename, deviceCheck, 10)
+            data = funcAction1(oringinDataFormat(), savename, deviceCheck, 10)
             writeToExcel(savename, title, data)
             break
         if functionSelect == '3':
