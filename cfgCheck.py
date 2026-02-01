@@ -92,7 +92,7 @@ def checkOptions(fileTxt, checkItems):  # 具体检查项
                 if value == 1:
                     # 执行未关闭端口检查逻辑
                     matchDownPortInfo = re.findall(
-                        r'(?:100|25)GE\d+\/\d+\/\d+\s+(down|down\(ed\)|down\(b\))(?:\s+\S+){5}', fileTxt,
+                        r'(?:100|25)GE\d+\/\d+\/\d+\s+(down|down\(ed\)|down\(b\))(?:\s+\S+){3}\s+\d+\s+\d+', fileTxt,
                         re.IGNORECASE)  # 匹配未关闭端口
                     if matchDownPortInfo:
                         checkResult.append(len(matchDownPortInfo))
@@ -108,7 +108,7 @@ def checkOptions(fileTxt, checkItems):  # 具体检查项
                     if bgpInfo:
                         bgpNum = re.findall(r'Total number of peers\s+\:\s+(\d+)', bgpInfo.group(), re.IGNORECASE)[0]
                         normalBgpNum = len(
-                            re.findall(r'\d+\.\d+\.\d+\.\d+(:?\s+\d+){5}\s\d{2}\:\d{2}\:\d{2}\s+Established',
+                            re.findall(r'\d+\.\d+\.\d+\.\d+(:?\s+\d+){5}\s+\S+\s+Established',
                                        bgpInfo.group(),
                                        re.IGNORECASE))
                         checkResult.append('邻居数量:%s,正常邻居数量:%d' % (bgpNum, normalBgpNum))
@@ -419,7 +419,7 @@ def checkOptions(fileTxt, checkItems):  # 具体检查项
                 if value == 1:
                     # 执行loopback配置检查逻辑
                     if genCheckOtion(
-                            'interface LoopBack1\s*\n\s*description \S+\s*\n\s*ip address \d+\.\d+\.\d+\.\d+ 255.255.255.255',
+                            'interface LoopBack1\s*\n\s*description \S+\s*\n\s*(?:ip binding vpn-instance\s+\S+\s*\n\s*)?ip address \d+\.\d+\.\d+\.\d+ 255.255.255.255',
                             fileTxt):
                         checkResult.append('通过')
                     else:
