@@ -315,23 +315,48 @@ def checkOptions(fileTxt, checkItems):  # 具体检查项
             case 'BGP配置':
                 if value == 1:
                     # 执行BGP配置检查逻辑
-                    matchSpineBgp = re.search(
-                        r'bgp\s+\d+\n\s+router-id\s+\S+\n timer keepalive 30 hold 90\n advertise lowest-priority all-address-family peer-up delay 120\n private-4-byte-as disable\n group \S+ external\n peer \S+ as-number \d+[\s\S]*? group \S+ external\n peer \S+ as-number \d+[\s\S]*?ipv4-family unicast\n  network \d+.\d+.\d+.\d+ \d+.\d+.\d+.\d+[\s\S]*?maximum load-balancing 32\n  peer \S+ enable\n  peer \S+ route-policy \S+ export\n  peer \S+ advertise-community\n  peer \S+ route-update-interval 0[\s\S]*?peer \S+ enable\n  peer \S+ advertise-community\n  peer \S+ route-update-interval 0[\s\S]*?route-policy \S+ permit node 10\n apply as-path \d+ overwrite',
-                        fileTxt,
-                        re.IGNORECASE)
-                    matchLeafBgp = re.search(
-                        r'bgp\s+\d+\n\s+router-id\s+\S+\n timer keepalive 30 hold 90\n advertise lowest-priority all-address-family peer-up delay 120\n private-4-byte-as disable[\s\S]*?group \S+ external\n peer \S+ as-number \S+[\s\S]*?ipv4-family unicast[\s\S]*?maximum load-balancing 32[\s\S]*?peer \S+ enable\n\s+peer \S+ advertise-community\n\s+peer \S+ route-update-interval 0',
-                        fileTxt, re.IGNORECASE)
-                    if checkItems['type'] in ['Leaf']:  # leafBGP
-                        if matchLeafBgp:
-                            checkResult.append('通过')
-                        else:
-                            checkResult.append('未通过')
-                    else:  # 其他BGP
-                        if matchSpineBgp:
-                            checkResult.append('通过')
-                        else:
-                            checkResult.append('未通过')
+                    # ipv4邻居配置检查格式
+                    SpineIpv4Bgp = ('group Leaf-IPv4 external\s*\n\s*peer Leaf-IPv4 as-number \d+'
+                                    '(:?\s*\n\s*peer \d+\.\d+\.\d+\.\d+ as-number \d+\s*\n\s*peer \d+\.\d+\.\d+\.\d+ group Leaf-IPv4\s*\n\s*peer \d+\.\d+\.\d+\.\d+ description \S+)+'
+                                    '\s*\n\s*group SuperSpine-IPv4 external\s*\n\s*peer SuperSpine-IPv4 as-number \d+'
+                                    '(:?\s*\n\s*peer \d+\.\d+\.\d+\.\d+ as-number \d+\s*\n\s*peer \d+\.\d+\.\d+\.\d+ group SuperSpine-IPv4\s*\n\s*peer \d+\.\d+\.\d+\.\d+ description \S+)+'
+                                    '\s*\n\s*#\s*\n\s*ipv4-family unicast'
+                                    '(:?\s*\n\s*network \d+\.\d+\.\d+\.\d+ \d+\.\d+\.\d+\.\d+)+'
+                                    '\s*\n\s*maximum load-balancing 32\s*\n\s* peer Leaf-IPv4 enable\s*\n\s*peer Leaf-IPv4 route-policy To-Server-Leaf export\s*\n\s*peer Leaf-IPv4 advertise-community\s*\n\s*  peer Leaf-IPv4 route-update-interval 0'
+                                    '(:?\s*\n\s*peer \d+\.\d+\.\d+\.\d+ enable\s*\n\s*peer \d+\.\d+\.\d+\.\d+ group Leaf-IPv4)+\s*\n\s*peer SuperSpine-IPv4 enable\s*\n\s*peer SuperSpine-IPv4 advertise-community\s*\n\s*peer SuperSpine-IPv4 route-update-interval 0'
+                                    '(:?\s*\n\s*peer \d+\.\d+\.\d+\.\d+ enable\s*\n\s*peer \d+\.\d+\.\d+\.\d+ group SuperSpine-IPv4)+'
+                                    '[\s\S]*?route-policy To-Server-Leaf permit node 10\s*\n\s*apply as-path \d+ overwrite')
+                    # vpnv4邻居配置检查格式
+                    spineVpnv4Bgp = ('#\s*\n\s*ipv4-family unicast\s*\n\s*#\s*\n\s*'
+                                     'ipv4-family vpn-instance CMB-PRD-CRI'
+                                     '(:?\s*\n\s*network \d+\.\d+\.\d+\.\d+ \d+\.\d+\.\d+\.\d+)+'
+                                     '\s*\n\s*maximum load-balancing 32\s*\n\s*group Leaf-IPv4 external\s*\n\s*peer Leaf-IPv4 as-number \d+'
+                                     '(:?\s*\n\s*peer \d+\.\d+\.\d+\.\d+ as-number \d+\s*\n\s*peer \d+\.\d+\.\d+\.\d+ group Leaf-IPv4\s*\n\s*peer \d+\.\d+\.\d+\.\d+ description \S+)+'
+                                     '\s*\n\s*peer Leaf-IPv4 route-policy To-Server-Leaf export\s*\n\s*peer Leaf-IPv4 advertise-community\s*\n\s*peer Leaf-IPv4 route-update-interval 0\s*\n\s*group SuperSpine-IPv4 external\s*\n\s*peer SuperSpine-IPv4 as-number \d+'
+                                     '(:?\s*\n\s*peer \d+\.\d+\.\d+\.\d+ as-number \d+\s*\n\s*peer \d+\.\d+\.\d+\.\d+ group SuperSpine-IPv4\s*\n\s*peer \d+\.\d+\.\d+\.\d+ description \S+)+'
+                                     '\s*\n\s*peer SuperSpine-IPv4 route-policy To-SuperSpine-CMB-PRD-CRI-IPv4 export\s*\n\s*peer SuperSpine-IPv4 advertise-community\s*\n\s*peer SuperSpine-IPv4 route-update-interval 0\s*\n\s*#\s*\n\s*'
+                                     'ipv4-family vpn-instance CMB-PRD-STD'
+                                     '\s*\n\s*maximum load-balancing 32\s*\n\s*group Leaf-IPv4 external\s*\n\s*peer Leaf-IPv4 as-number \d+'
+                                     '(:?\s*\n\s*peer \d+\.\d+\.\d+\.\d+ as-number \d+\s*\n\s*peer \d+\.\d+\.\d+\.\d+ group Leaf-IPv4\s*\n\s*peer \d+\.\d+\.\d+\.\d+ description \S+)+'
+                                     '\s*\n\s*peer Leaf-IPv4 route-policy To-Server-Leaf export\s*\n\s*peer Leaf-IPv4 advertise-community\s*\n\s*peer Leaf-IPv4 route-update-interval 0\s*\n\s*group SuperSpine-IPv4 external\s*\n\s*peer SuperSpine-IPv4 as-number \d+'
+                                     '(:?\s*\n\s*peer \d+\.\d+\.\d+\.\d+ as-number \d+\s*\n\s*peer \d+\.\d+\.\d+\.\d+ group SuperSpine-IPv4\s*\n\s*peer \d+\.\d+\.\d+\.\d+ description \S+)+'
+                                     '\s*\n\s*peer SuperSpine-IPv4 advertise-community\s*\n\s*peer SuperSpine-IPv4 route-update-interval 0'
+                                     '[\s\S]*?route-policy To-Server-Leaf permit node 10\s*\n\s*apply as-path \d+ overwrite[\s\S]*?route-policy To-SuperSpine-CMB-PRD-CRI-IPv4 deny node 10\s*\n\s*if-match ip-prefix Static-SLF-CMB-PRD-CRI-IPv4')
+                    # leaf邻居配置检查格式
+                    leafBgp = ('group Spine-IPv4 external\s*\n\s*peer Spine-IPv4 as-number \d+'
+                               '(:?\s*\n\s*peer \d+\.\d+\.\d+\.\d+ as-number \d+\s*\n\s*peer \d+\.\d+\.\d+\.\d+ group Spine-IPv4\s*\n\s*peer \d+\.\d+\.\d+\.\d+ description \S+)+'
+                               '\s*\n\s*#\s*\n\s*ipv4-family unicast'
+                               '(:?\s*\n\s*network \d+\.\d+\.\d+\.\d+ \d+\.\d+\.\d+\.\d+)+'
+                               '\s*\n\s*maximum load-balancing 32\s*\n\s* peer Spine-IPv4 enable\s*\n\s*peer Spine-IPv4 advertise-community\s*\n\s*  peer Spine-IPv4 route-update-interval 0'
+                               '(:?\s*\n\s*peer \d+\.\d+\.\d+\.\d+ enable\s*\n\s*peer \d+\.\d+\.\d+\.\d+ group Spine-IPv4)+')
+                    matchPart = re.compile(
+                        r'bgp \d+\s*\n\s*router-id \d+\.\d+\.\d+\.\d+\s*\n\s*timer keepalive 30 hold 90\s*\n\s*advertise lowest-priority all-address-family peer-up delay 120\s*\n\s*private-4-byte-as disable\s*\n\s*'  # bgp基础配置
+                        rf'(?:(?={SpineIpv4Bgp})|(?={spineVpnv4Bgp})|(?={leafBgp}))')  # 组配置
+                    matchbgpGenInfo = matchPart.search(fileTxt)
+                    if matchbgpGenInfo:
+                        checkResult.append('通过')
+                    else:
+                        checkResult.append('不通过')
                 else:
                     checkResult.append('不涉及')
 
