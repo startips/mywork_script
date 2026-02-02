@@ -120,18 +120,15 @@ def checkOptions(fileTxt, checkItems):  # 具体检查项
             case 'feature-software状态':
                 if value == 1:
                     # 执行feature-software状态检查逻辑
-                    matchVerinfo = re.findall(r'Version \S+ \(\S+ (\S+)\)', fileTxt)
-                    if matchVerinfo:
-                        if 'V300' in matchVerinfo[0]:  # 判断V300版本
-                            matchFertureInfo = re.findall(
-                                '(:?PKG_PNF|AIFABRIC|TELEMETRY|WEAKEA)\s+\S+\.cc\s+active\s+\S+\s+\d{4}-\d{2}-\d{2}\s+\d{2}\:\d{2}\:\d{2}',
-                                fileTxt, re.IGNORECASE)
-                            if len(matchFertureInfo) >= 4:
-                                checkResult.append('通过')
-                            else:
-                                checkResult.append('未通过')
+                    matchFeaInfo = re.search(r'FeatureName[\s\S]*?<', fileTxt)
+                    if matchFeaInfo:
+                        featureInfo = re.findall(
+                            r'(:?PKG_PNF|AIFABRIC|TELEMETRY|WEAKEA)\s+\S+\.cc\s+active\s+\S+\s+\d{4}-\d{2}-\d{2}\s+\d{2}\:\d{2}\:\d{2}',
+                            matchFeaInfo.group(), re.IGNORECASE)
+                        if len(featureInfo) >= 4:
+                            checkResult.append('通过')
                         else:
-                            checkResult.append('不涉及')
+                            checkResult.append('未通过')
                     else:
                         checkResult.append('未匹配到')
                 else:
@@ -351,7 +348,7 @@ def checkOptions(fileTxt, checkItems):  # 具体检查项
                                '(:?\s*\n\s*peer \d+\.\d+\.\d+\.\d+ enable\s*\n\s*peer \d+\.\d+\.\d+\.\d+ group Spine-IPv4)+')
                     matchPart = re.compile(
                         r'bgp \d+\s*\n\s*router-id \d+\.\d+\.\d+\.\d+\s*\n\s*timer keepalive 30 hold 90\s*\n\s*advertise lowest-priority all-address-family peer-up delay 120\s*\n\s*private-4-byte-as disable\s*\n\s*'  # bgp基础配置
-                        rf'(?:(?={SpineIpv4Bgp})|(?={spineVpnv4Bgp})|(?={leafBgp}))')  # 组配置
+                        rf'(?:(?={SpineIpv4Bgp})|(?={spineVpnv4Bgp})|(?={leafBgp}))', re.IGNORECASE)  # 组配置
                     matchbgpGenInfo = matchPart.search(fileTxt)
                     if matchbgpGenInfo:
                         checkResult.append('通过')
