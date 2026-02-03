@@ -151,7 +151,7 @@ def checkOptions(fileTxt, checkItems):  # 具体检查项
             case 'pki配置':
                 if value == 1:
                     # pki配置检查逻辑
-                    if genCheckOtion('pki realm default', fileTxt):
+                    if genCheckOtion('#\s*\n\s*pki realm default\s*\n\s*#', fileTxt):
                         checkResult.append('通过')
                     else:
                         checkResult.append('未通过')
@@ -162,7 +162,8 @@ def checkOptions(fileTxt, checkItems):  # 具体检查项
                 if value == 1:
                     # 关闭FTP配置检查逻辑
                     if genCheckOtion(
-                            'undo ftp server source all-interface\s*\n\s*undo ftp ipv6 server source all-interface',
+                            'undo ftp server source all-interface\s*\n\s*'
+                            'undo ftp ipv6 server source all-interface',
                             fileTxt):
                         checkResult.append('通过')
                     else:
@@ -174,7 +175,9 @@ def checkOptions(fileTxt, checkItems):  # 具体检查项
                 if value == 1:
                     # 执行mlag状态检查逻辑
                     if genCheckOtion(
-                            'Heart beat state\s+\:\s+OK\s*\n\s*Node [12][\s\S]*?State\s+\:\s+(:?Backup|Master)[\s\S]*?Node [12][\s\S]*?State\s+\:\s+(:?Backup|Master)',
+                            'Heart beat state\s+\:\s+OK\s*\n\s*'
+                            'Node [12][\s\S]*?State\s+\:\s+(:?Backup|Master)[\s\S]*?'
+                            'Node [12][\s\S]*?State\s+\:\s+(:?Backup|Master)',
                             fileTxt):
                         checkResult.append('通过')
                     else:
@@ -186,7 +189,13 @@ def checkOptions(fileTxt, checkItems):  # 具体检查项
                 if value == 1:
                     # 执行mlag配置检查逻辑
                     if genCheckOtion(
-                            'dfs-group 1\n\s+authentication-mode hmac-sha256 password \S+\n\s+dual-active detection source ip \S+ vpn-instance DAD peer \S+\s*\n\s+m-lag up-delay 90\s*\n\s+priority 1[25]0',
+                            '#\s*\n\s*'
+                            'dfs-group 1\s*\n\s*'
+                            'authentication-mode hmac-sha256 password \S+\s*\n\s*'
+                            'dual-active detection source ip \S+ vpn-instance DAD peer \S+\s*\n\s*'
+                            'm-lag up-delay 90\s*\n\s*'
+                            'priority 1[25]0\s*\n\s*'
+                            '#',
                             fileTxt):
                         checkResult.append('通过')
                     else:
@@ -197,7 +206,7 @@ def checkOptions(fileTxt, checkItems):  # 具体检查项
             case '大路由配置':
                 if value == 1:
                     if genCheckOtion(
-                            'system resource large-route',
+                            '#\s*\n\s*system resource large-route\s*\n\s*#',
                             fileTxt):
                         checkResult.append('通过')
                     else:
@@ -209,7 +218,8 @@ def checkOptions(fileTxt, checkItems):  # 具体检查项
                 if value == 1:
                     # 执行NTP配置检查逻辑
                     if genCheckOtion(
-                            'ntp server source-interface all disable\s*\n\s*ntp ipv6 server source-interface all disable',
+                            'ntp server source-interface all disable\s*\n\s*'
+                            'ntp ipv6 server source-interface all disable',
                             fileTxt):
                         checkResult.append('通过')
                     else:
@@ -233,7 +243,8 @@ def checkOptions(fileTxt, checkItems):  # 具体检查项
                 if value == 1:
                     # 执行mac飘移配置检查逻辑
                     if genCheckOtion(
-                            'mac-address flapping detection security-level low\s*\n\s*mac-address flapping periodical trap enable',
+                            'mac-address flapping detection security-level low\s*\n\s*'
+                            'mac-address flapping periodical trap enable',
                             fileTxt):
                         checkResult.append('通过')
                     else:
@@ -245,7 +256,12 @@ def checkOptions(fileTxt, checkItems):  # 具体检查项
                 if value == 1:
                     # 执行STP配置检查逻辑
                     if genCheckOtion(
-                            'stp bridge-address \d{4}-\d{4}-\d{4}\s*\n\s*stp mode rstp\s*\n\s*stp v-stp enable\s*\n\s*stp instance 0 root primary\s*\n\s*stp bpdu-protection\s*\n\s*stp tc-protection',
+                            'stp bridge-address \d{4}-\d{4}-\d{4}\s*\n\s*'
+                            'stp mode rstp\s*\n\s*'
+                            'stp v-stp enable\s*\n\s*'
+                            'stp instance 0 root primary\s*\n\s*'
+                            'stp bpdu-protection\s*\n\s*'
+                            'stp tc-protection',
                             fileTxt):
                         checkResult.append('通过')
                     else:
@@ -257,7 +273,7 @@ def checkOptions(fileTxt, checkItems):  # 具体检查项
                 if value == 1:
                     # 执行arp冲突配置检查逻辑
                     if genCheckOtion(
-                            'arp ip-conflict-detect enable',
+                            '#\s*\n\s*arp ip-conflict-detect enable\s*\n\s*#',
                             fileTxt):
                         checkResult.append('通过')
                     else:
@@ -269,7 +285,10 @@ def checkOptions(fileTxt, checkItems):  # 具体检查项
                 if value == 1:
                     # 执行telnet关闭配置检查逻辑
                     if genCheckOtion(
-                            'telnet server disable\s*\n\s*telnet ipv6 server disable\s*\n\s*undo telnet server-source all-interface\s*\n\s*undo telnet ipv6 server-source all-interface',
+                            'telnet server disable\s*\n\s*'
+                            'telnet ipv6 server disable\s*\n\s*'
+                            'undo telnet server-source all-interface\s*\n\s*'
+                            'undo telnet ipv6 server-source all-interface',
                             fileTxt):
                         checkResult.append('通过')
                     else:
@@ -280,10 +299,18 @@ def checkOptions(fileTxt, checkItems):  # 具体检查项
             case 'vpn实例配置':
                 if value == 1:
                     # 执行vpn实例配置检查逻辑
-                    matchOob = re.search(r'ip vpn-instance OOB\s*\n\s*ipv4-family\s*\n\s*route-distinguisher 200:1',
-                                         fileTxt,
+                    matchOob = re.search(
+                        r'#\s*\n\s*'
+                        r'ip vpn-instance OOB\s*\n\s*'
+                        r'ipv4-family\s*\n\s*route-distinguisher 200:1\s*\n\s*'
+                        r'#',
+                        fileTxt,
+                        re.IGNORECASE)
+                    matchDad = re.search(r'#\s*\n\s*'
+                                         r'ip vpn-instance DAD\s*\n\s*'
+                                         r'ipv4-family\s*\n\s*'
+                                         r'#', fileTxt,
                                          re.IGNORECASE)
-                    matchDad = re.search(r'ip vpn-instance DAD\s*\n\s*ipv4-family', fileTxt, re.IGNORECASE)
                     if checkItems['type'] in ['Leaf']:  # leaf必须包含2个实例
                         if matchOob and matchDad:
                             checkResult.append('通过')
@@ -301,7 +328,29 @@ def checkOptions(fileTxt, checkItems):  # 具体检查项
                 if value == 1:
                     # 执行aaa配置检查逻辑
                     if genCheckOtion(
-                            'aaa\s*\n\s*authentication-scheme default\s*\n\s*authentication-mode local\s*\n\s*authorization-scheme default\s*\n\s*authorization-mode local\s*\n\s*accounting-scheme default\s*\n\s*accounting-mode none\s*\n\s*local-aaa-user password policy administrator\s*\n\s*password history record number 0\s*\n\s*password alert before-expire 0\s*\n\s*undo password alert original\s*\n\s*password expire 0\s*\n\s*domain default\s*\n\s*authentication-scheme default\s*\n\s*accounting-scheme default\s*\n\s*domain default_admin\s*\n\s*authentication-scheme default\s*\n\s*accounting-scheme default\s*\n\s*local-aaa-user user-name complexity-check disable\s*\n\s*(?:local-user (?:admin|nmsuser) password irreversible-cipher \S+\s*\n\s*local-user (?:admin|nmsuser) password-force-change disable\s*\n\s*local-user (?:admin|nmsuser) privilege level [13]\s*\n\s*local-user (?:admin|nmsuser) service-type terminal ssh\s*\n\s*){2}',
+                            'aaa\s*\n\s*'
+                            'authentication-scheme default\s*\n\s*'
+                            'authentication-mode local\s*\n\s*'
+                            'authorization-scheme default\s*\n\s*'
+                            'authorization-mode local\s*\n\s*'
+                            'accounting-scheme default\s*\n\s*'
+                            'accounting-mode none\s*\n\s*'
+                            'local-aaa-user password policy administrator\s*\n\s*'
+                            'password history record number 0\s*\n\s*'
+                            'password alert before-expire 0\s*\n\s*'
+                            'undo password alert original\s*\n\s*'
+                            'password expire 0\s*\n\s*'
+                            'domain default\s*\n\s*'
+                            'authentication-scheme default\s*\n\s*'
+                            'accounting-scheme default\s*\n\s*'
+                            'domain default_admin\s*\n\s*'
+                            'authentication-scheme default\s*\n\s*'
+                            'accounting-scheme default\s*\n\s*'
+                            'local-aaa-user user-name complexity-check disable\s*\n\s*'
+                            '(?:local-user (?:admin|nmsuser) password irreversible-cipher \S+\s*\n\s*'
+                            'local-user (?:admin|nmsuser) password-force-change disable\s*\n\s*'
+                            'local-user (?:admin|nmsuser) privilege level [13]\s*\n\s*'
+                            'local-user (?:admin|nmsuser) service-type terminal ssh\s*\n\s*){2}',
                             fileTxt):
                         checkResult.append('通过')
                     else:
@@ -361,7 +410,24 @@ def checkOptions(fileTxt, checkItems):  # 具体检查项
                 if value == 1:
                     # 执行snmp配置检查逻辑
                     if genCheckOtion(
-                            'snmp-agent\nsnmp-agent local-engineid \S+\nsnmp-agent community read cipher.*?mib-view iso-view.*?\n#\nsnmp-agent sys-info location.*?\nsnmp-agent sys-info version v2c v3\nsnmp-agent community complexity-check disable\n#\nsnmp-agent usm-user password complexity-check disable\nsnmp-agent mib-view included iso-view iso\n#\nsnmp-agent blacklist ip-block disable\n#\nsnmp-agent protocol source-status all-interface\nundo snmp-agent protocol source-status ipv6 all-interface\n#\nundo snmp-agent proxy protocol source-status all-interface\nundo snmp-agent proxy protocol source-status ipv6 all-interface',
+                            'snmp-agent\s*\n\s*'
+                            'snmp-agent local-engineid \S+\s*\n\s*'
+                            'snmp-agent community read cipher.*?mib-view iso-view.*?\s*\n\s*'
+                            '#\s*\n\s*'
+                            'snmp-agent sys-info location.*?\s*\n\s*'
+                            'snmp-agent sys-info version v2c v3\s*\n\s*'
+                            'snmp-agent community complexity-check disable\s*\n\s*'
+                            '#\s*\n\s*'
+                            'snmp-agent usm-user password complexity-check disable\s*\n\s*'
+                            'snmp-agent mib-view included iso-view iso\s*\n\s*'
+                            '#\s*\n\s*'
+                            'snmp-agent blacklist ip-block disable\s*\n\s*'
+                            '#\s*\n\s*'
+                            'snmp-agent protocol source-status all-interface\s*\n\s*'
+                            'undo snmp-agent protocol source-status ipv6 all-interface\s*\n\s*'
+                            '#\s*\n\s*'
+                            'undo snmp-agent proxy protocol source-status all-interface\s*\n\s*'
+                            'undo snmp-agent proxy protocol source-status ipv6 all-interface',
                             fileTxt):
                         checkResult.append('通过')
                     else:
@@ -372,7 +438,7 @@ def checkOptions(fileTxt, checkItems):  # 具体检查项
             case 'LLDP配置':
                 if value == 1:
                     # 执行LLDP配置检查逻辑
-                    if genCheckOtion('lldp enable', fileTxt):
+                    if genCheckOtion('#\s*\n\s*lldp enable\s*\n\s*#', fileTxt):
                         checkResult.append('通过')
                     else:
                         checkResult.append('未通过')
@@ -383,7 +449,25 @@ def checkOptions(fileTxt, checkItems):  # 具体检查项
                 if value == 1:
                     # 执行ssh配置检查逻辑
                     if genCheckOtion(
-                            'stelnet server enable\nssh server rsa-key min-length 3072\nssh server-source all-interface\nundo ssh ipv6 server-source all-interface\nssh authorization-type default aaa\n#\nssh server cipher aes256_gcm aes128_gcm aes256_ctr aes192_ctr aes128_ctr aes256_cbc aes192_cbc aes128_cbc arcfour256 arcfour128 3des_cbc blowfish_cbc des_cbc\nssh server hmac sha2_512 sha2_256_96 sha2_256 sha1 sha1_96 md5 md5_96\nssh server key-exchange dh_group_exchange_sha256 dh_group_exchange_sha1 dh_group14_sha1 dh_group1_sha1 ecdh_sha2_nistp256 ecdh_sha2_nistp384 ecdh_sha2_nistp521 sm2_kep dh_group16_sha512 curve25519_sha256\n#\nssh server publickey dsa ecc rsa rsa_sha2_256 rsa_sha2_512\n#\nssh server dh-exchange min-len 2048\n#\nssh client publickey ecc rsa_sha2_256 rsa_sha2_512\n#\nssh client cipher aes256_gcm aes128_gcm aes256_ctr aes192_ctr aes128_ctr\nssh client hmac sha2_512 sha2_256\nssh client key-exchange dh_group_exchange_sha256 dh_group16_sha512',
+                            'stelnet server enable\s*\n\s*'
+                            'ssh server rsa-key min-length 3072\s*\n\s*'
+                            'ssh server-source all-interface\s*\n\s*'
+                            'undo ssh ipv6 server-source all-interface\s*\n\s*'
+                            'ssh authorization-type default aaa\s*\n\s*'
+                            '#\s*\n\s*'
+                            'ssh server cipher aes256_gcm aes128_gcm aes256_ctr aes192_ctr aes128_ctr aes256_cbc aes192_cbc aes128_cbc arcfour256 arcfour128 3des_cbc blowfish_cbc des_cbc\s*\n\s*'
+                            'ssh server hmac sha2_512 sha2_256_96 sha2_256 sha1 sha1_96 md5 md5_96\s*\n\s*'
+                            'ssh server key-exchange dh_group_exchange_sha256 dh_group_exchange_sha1 dh_group14_sha1 dh_group1_sha1 ecdh_sha2_nistp256 ecdh_sha2_nistp384 ecdh_sha2_nistp521 sm2_kep dh_group16_sha512 curve25519_sha256\s*\n\s*'
+                            '#\s*\n\s*'
+                            'ssh server publickey dsa ecc rsa rsa_sha2_256 rsa_sha2_512\s*\n\s*'
+                            '#\s*\n\s*'
+                            'ssh server dh-exchange min-len 2048\s*\n\s*'
+                            '#\s*\n\s*'
+                            'ssh client publickey ecc rsa_sha2_256 rsa_sha2_512\s*\n\s*'
+                            '#\s*\n\s*'
+                            'ssh client cipher aes256_gcm aes128_gcm aes256_ctr aes192_ctr aes128_ctr\s*\n\s*'
+                            'ssh client hmac sha2_512 sha2_256\s*\n\s*'
+                            'ssh client key-exchange dh_group_exchange_sha256 dh_group16_sha512',
                             fileTxt):
                         checkResult.append('通过')
                     else:
@@ -395,7 +479,10 @@ def checkOptions(fileTxt, checkItems):  # 具体检查项
                 if value == 1:
                     # 执行cmd权限配置检查逻辑
                     if genCheckOtion(
-                            'command-privilege level 1 view shell dir\ncommand-privilege level 1 view global display\ncommand-privilege level 1 view shell save\ncommand-privilege level 1 view shell screen-length',
+                            'command-privilege level 1 view shell dir\s*\n\s*'
+                            'command-privilege level 1 view global display\s*\n\s*'
+                            'command-privilege level 1 view shell save\s*\n\s*'
+                            'command-privilege level 1 view shell screen-length',
                             fileTxt):
                         checkResult.append('通过')
                     else:
@@ -407,7 +494,17 @@ def checkOptions(fileTxt, checkItems):  # 具体检查项
                 if value == 1:
                     # 执行user-interface配置检查逻辑
                     if genCheckOtion(
-                            'user-interface maximum-vty 21\n#\nuser-interface con 0\n authentication-mode password\n set authentication password cipher \S+\n idle-timeout 10 0\n#\nuser-interface vty 0 20\n authentication-mode aaa\n user privilege level 3\n protocol inbound ssh',
+                            'user-interface maximum-vty 21\s*\n\s*'
+                            '#\s*\n\s*'
+                            'user-interface con 0\s*\n\s*'
+                            'authentication-mode password\s*\n\s*'
+                            'set authentication password cipher \S+\s*\n\s*'
+                            'idle-timeout 10 0\s*\n\s*'
+                            '#\s*\n\s*'
+                            'user-interface vty 0 20\s*\n\s*'
+                            'authentication-mode aaa\s*\n\s*'
+                            'user privilege level 3\s*\n\s*'
+                            'protocol inbound ssh',
                             fileTxt):
                         checkResult.append('通过')
                     else:
@@ -418,7 +515,10 @@ def checkOptions(fileTxt, checkItems):  # 具体检查项
             case 'hash配置':
                 if value == 1:
                     # 执行hash配置检查逻辑
-                    if genCheckOtion('load-balance ecmp\s*\n\s*hashmode underlay 2', fileTxt):
+                    if genCheckOtion('#\s*\n\s*'
+                                     'load-balance ecmp\s*\n\s*'
+                                     'hashmode underlay 2\s*\n\s*'
+                                     '#', fileTxt):
                         checkResult.append('通过')
                     else:
                         checkResult.append('未通过')
@@ -429,7 +529,10 @@ def checkOptions(fileTxt, checkItems):  # 具体检查项
                 if value == 1:
                     # 执行带外接口配置检查逻辑
                     if genCheckOtion(
-                            'interface MEth\S+\s*\n\s*description Out-Of-OOB\s*\n\s*ip binding vpn-instance OOB\s*\n\s*ip address \d+\.\d+\.\d+\.\d+ 255.255.255.0',
+                            'interface MEth\S+\s*\n\s*'
+                            'description Out-Of-OOB\s*\n\s*'
+                            'ip binding vpn-instance OOB\s*\n\s*'
+                            'ip address \d+\.\d+\.\d+\.\d+ 255.255.255.0',
                             fileTxt):
                         checkResult.append('通过')
                     else:
@@ -441,7 +544,10 @@ def checkOptions(fileTxt, checkItems):  # 具体检查项
                 if value == 1:
                     # 执行loopback配置检查逻辑
                     if genCheckOtion(
-                            'interface LoopBack1\s*\n\s*description \S+\s*\n\s*(?:ip binding vpn-instance\s+\S+\s*\n\s*)?ip address \d+\.\d+\.\d+\.\d+ 255.255.255.255',
+                            'interface LoopBack1\s*\n\s*'
+                            'description \S+\s*\n\s*'
+                            '(?:ip binding vpn-instance\s+\S+\s*\n\s*)?'
+                            'ip address \d+\.\d+\.\d+\.\d+ 255.255.255.255',
                             fileTxt):
                         checkResult.append('通过')
                     else:
@@ -453,17 +559,32 @@ def checkOptions(fileTxt, checkItems):  # 具体检查项
                 if value == 1:
                     # 执行peerlink配置检查逻辑
                     matchPeerlinkEth = re.search(
-                        r'interface Eth-Trunk100\s*\n\s*description To_\S+_Eth-Trunk100\s*\n\s*mode lacp-static\s*\n\s*peer-link 1',
+                        r'interface Eth-Trunk100\s*\n\s*'
+                        r'description To_\S+_Eth-Trunk100\s*\n\s*'
+                        r'mode lacp-static\s*\n\s*'
+                        r'peer-link 1',
                         fileTxt,
                         re.IGNORECASE)
                     matchPeerlinkPort = re.findall(
-                        r'interface 100GE1/0/[37]\s*\n\s*description To_\S+_100GE1/0/[37]\s*\n\s*eth-trunk 100',
+                        r'interface 100GE1/0/[37]\s*\n\s*'
+                        r'description To_\S+_100GE1/0/[37]\s*\n\s*'
+                        r'eth-trunk 100',
                         fileTxt,
                         re.IGNORECASE)
-                    if matchPeerlinkEth and len(matchPeerlinkPort) == 2:
-                        checkResult.append('通过')
+                    matchPeerlinkPortSlf = re.findall(
+                        r'interface 25GE1/0/\d{2}\s*\n\s*'
+                        r'description To_\S+_25GE1/0/\d{2}\s*\n\s*'
+                        r'eth-trunk 100', fileTxt, re.IGNORECASE)
+                    if checkItems['type'] in ['Slf']:
+                        if matchPeerlinkEth and len(matchPeerlinkPortSlf) == 8:  # Sleaf8个端口
+                            checkResult.append('通过')
+                        else:
+                            checkResult.append('未通过')
                     else:
-                        checkResult.append('未通过')
+                        if matchPeerlinkEth and len(matchPeerlinkPort) == 2:
+                            checkResult.append('通过')
+                        else:
+                            checkResult.append('未通过')
                 else:
                     checkResult.append('不涉及')
 
@@ -471,11 +592,19 @@ def checkOptions(fileTxt, checkItems):  # 具体检查项
                 if value == 1:
                     # 执行DAD配置检查逻辑
                     matchDadEth = re.search(
-                        r'interface Eth-Trunk101\s*\n\s*undo portswitch\s*\n\s*description To_\S+_Eth-Trunk101\s*\n\s*ip binding vpn-instance DAD\s*\n\s*ip address \d+\.\d+\.\d+\.\d+ 255.255.255.252\s*\n\s*mode lacp-static\s*\n\s*m-lag unpaired-port reserved',
+                        r'interface Eth-Trunk101\s*\n\s*'
+                        r'undo portswitch\s*\n\s*'
+                        r'description To_\S+_Eth-Trunk101\s*\n\s*'
+                        r'ip binding vpn-instance DAD\s*\n\s*'
+                        r'ip address \d+\.\d+\.\d+\.\d+ 255.255.255.252\s*\n\s*'
+                        r'mode lacp-static\s*\n\s*'
+                        r'm-lag unpaired-port reserved',
                         fileTxt,
                         re.IGNORECASE)
                     matchDadPort = re.findall(
-                        r'interface 25GE1/0/4[678]\s*\n\s*description To_\S+_25GE1/0/4[678]\s*\n\s*eth-trunk 101',
+                        r'interface 25GE1/0/4[678]\s*\n\s*'
+                        r'description To_\S+_25GE1/0/4[678]\s*\n\s*'
+                        r'eth-trunk 101',
                         fileTxt,
                         re.IGNORECASE)
                     if matchDadEth and len(matchDadPort) == 2:
@@ -488,12 +617,119 @@ def checkOptions(fileTxt, checkItems):  # 具体检查项
             case 'monitor-link配置':
                 if value == 1:
                     # 执行monitor-link配置检查逻辑
-                    if genCheckOtion(
-                            'monitor-link group 1\s*\n\s*port 100GE1/0/1 uplink\s*\n\s*port 100GE1/0/2 uplink\s*\n\s*port 100GE1/0/5 uplink\s*\n\s*port 100GE1/0/6 uplink\s*\n\s*port 25GE1/0/1 downlink 1\s*\n\s*port 25GE1/0/2 downlink 2\s*\n\s*port 25GE1/0/3 downlink 3\s*\n\s*port 25GE1/0/4 downlink 4\s*\n\s*port 25GE1/0/5 downlink 5\s*\n\s*port 25GE1/0/6 downlink 6\s*\n\s*port 25GE1/0/7 downlink 7\s*\n\s*port 25GE1/0/8 downlink 8\s*\n\s*port 25GE1/0/9 downlink 9\s*\n\s*port 25GE1/0/10 downlink 10\s*\n\s*port 25GE1/0/11 downlink 11\s*\n\s*port 25GE1/0/12 downlink 12\s*\n\s*port 25GE1/0/13 downlink 13\s*\n\s*port 25GE1/0/14 downlink 14\s*\n\s*port 25GE1/0/15 downlink 15\s*\n\s*port 25GE1/0/16 downlink 16\s*\n\s*port 25GE1/0/17 downlink 17\s*\n\s*port 25GE1/0/18 downlink 18\s*\n\s*port 25GE1/0/19 downlink 19\s*\n\s*port 25GE1/0/20 downlink 20\s*\n\s*port 25GE1/0/21 downlink 21\s*\n\s*port 25GE1/0/22 downlink 22\s*\n\s*port 25GE1/0/23 downlink 23\s*\n\s*port 25GE1/0/24 downlink 24\s*\n\s*port 25GE1/0/25 downlink 25\s*\n\s*port 25GE1/0/26 downlink 26\s*\n\s*port 25GE1/0/27 downlink 27\s*\n\s*port 25GE1/0/28 downlink 28\s*\n\s*port 25GE1/0/29 downlink 29\s*\n\s*port 25GE1/0/30 downlink 30\s*\n\s*port 25GE1/0/31 downlink 31\s*\n\s*port 25GE1/0/32 downlink 32\s*\n\s*port 25GE1/0/33 downlink 33\s*\n\s*port 25GE1/0/34 downlink 34\s*\n\s*port 25GE1/0/35 downlink 35\s*\n\s*port 25GE1/0/36 downlink 36\s*\n\s*port 25GE1/0/37 downlink 37\s*\n\s*port 25GE1/0/38 downlink 38\s*\n\s*port 25GE1/0/39 downlink 39\s*\n\s*port 25GE1/0/40 downlink 40\s*\n\s*port 25GE1/0/41 downlink 41\s*\n\s*port 25GE1/0/42 downlink 42\s*\n\s*port 25GE1/0/43 downlink 43\s*\n\s*port 25GE1/0/44 downlink 44\s*\n\s*port 25GE1/0/45 downlink 45\s*\n\s*port 25GE1/0/4[68] downlink 4[68]\s*\n\s*timer recover-time 40',
-                            fileTxt):
-                        checkResult.append('通过')
+                    # leaf
+                    matchMonitorLinkInfo = genCheckOtion(
+                        'monitor-link group 1\s*\n\s*'
+                        'port 100GE1/0/1 uplink\s*\n\s*'
+                        'port 100GE1/0/2 uplink\s*\n\s*'
+                        'port 100GE1/0/5 uplink\s*\n\s*'
+                        'port 100GE1/0/6 uplink\s*\n\s*'
+                        'port 25GE1/0/1 downlink 1\s*\n\s*'
+                        'port 25GE1/0/2 downlink 2\s*\n\s*'
+                        'port 25GE1/0/3 downlink 3\s*\n\s*'
+                        'port 25GE1/0/4 downlink 4\s*\n\s*'
+                        'port 25GE1/0/5 downlink 5\s*\n\s*'
+                        'port 25GE1/0/6 downlink 6\s*\n\s*'
+                        'port 25GE1/0/7 downlink 7\s*\n\s*'
+                        'port 25GE1/0/8 downlink 8\s*\n\s*'
+                        'port 25GE1/0/9 downlink 9\s*\n\s*'
+                        'port 25GE1/0/10 downlink 10\s*\n\s*'
+                        'port 25GE1/0/11 downlink 11\s*\n\s*'
+                        'port 25GE1/0/12 downlink 12\s*\n\s*'
+                        'port 25GE1/0/13 downlink 13\s*\n\s*'
+                        'port 25GE1/0/14 downlink 14\s*\n\s*'
+                        'port 25GE1/0/15 downlink 15\s*\n\s*'
+                        'port 25GE1/0/16 downlink 16\s*\n\s*'
+                        'port 25GE1/0/17 downlink 17\s*\n\s*'
+                        'port 25GE1/0/18 downlink 18\s*\n\s*'
+                        'port 25GE1/0/19 downlink 19\s*\n\s*'
+                        'port 25GE1/0/20 downlink 20\s*\n\s*'
+                        'port 25GE1/0/21 downlink 21\s*\n\s*'
+                        'port 25GE1/0/22 downlink 22\s*\n\s*'
+                        'port 25GE1/0/23 downlink 23\s*\n\s*'
+                        'port 25GE1/0/24 downlink 24\s*\n\s*'
+                        'port 25GE1/0/25 downlink 25\s*\n\s*'
+                        'port 25GE1/0/26 downlink 26\s*\n\s*'
+                        'port 25GE1/0/27 downlink 27\s*\n\s*'
+                        'port 25GE1/0/28 downlink 28\s*\n\s*'
+                        'port 25GE1/0/29 downlink 29\s*\n\s*'
+                        'port 25GE1/0/30 downlink 30\s*\n\s*'
+                        'port 25GE1/0/31 downlink 31\s*\n\s*'
+                        'port 25GE1/0/32 downlink 32\s*\n\s*'
+                        'port 25GE1/0/33 downlink 33\s*\n\s*'
+                        'port 25GE1/0/34 downlink 34\s*\n\s*'
+                        'port 25GE1/0/35 downlink 35\s*\n\s*'
+                        'port 25GE1/0/36 downlink 36\s*\n\s*'
+                        'port 25GE1/0/37 downlink 37\s*\n\s*'
+                        'port 25GE1/0/38 downlink 38\s*\n\s*'
+                        'port 25GE1/0/39 downlink 39\s*\n\s*'
+                        'port 25GE1/0/40 downlink 40\s*\n\s*'
+                        'port 25GE1/0/41 downlink 41\s*\n\s*'
+                        'port 25GE1/0/42 downlink 42\s*\n\s*'
+                        'port 25GE1/0/43 downlink 43\s*\n\s*'
+                        'port 25GE1/0/44 downlink 44\s*\n\s*'
+                        'port 25GE1/0/45 downlink 45\s*\n\s*'
+                        'port 25GE1/0/4[68] downlink 4[68]\s*\n\s*'
+                        'timer recover-time 40',
+                        fileTxt)
+                    # Sleaf
+                    matchMonitorLinkSlfInfo = genCheckOtion(
+                        'monitor-link group 1\s*\n\s*'
+                        'port 100GE1/0/1 uplink\s*\n\s*'
+                        'port 100GE1/0/2 uplink\s*\n\s*'
+                        'port 100GE1/0/5 uplink\s*\n\s*'
+                        'port 100GE1/0/6 uplink\s*\n\s*'
+                        'port 25GE1/0/1 downlink 1\s*\n\s*'
+                        'port 25GE1/0/2 downlink 2\s*\n\s*'
+                        'port 25GE1/0/3 downlink 3\s*\n\s*'
+                        'port 25GE1/0/4 downlink 4\s*\n\s*'
+                        'port 25GE1/0/5 downlink 5\s*\n\s*'
+                        'port 25GE1/0/6 downlink 6\s*\n\s*'
+                        'port 25GE1/0/7 downlink 7\s*\n\s*'
+                        'port 25GE1/0/8 downlink 8\s*\n\s*'
+                        'port 25GE1/0/9 downlink 9\s*\n\s*'
+                        'port 25GE1/0/10 downlink 10\s*\n\s*'
+                        'port 25GE1/0/11 downlink 11\s*\n\s*'
+                        'port 25GE1/0/12 downlink 12\s*\n\s*'
+                        'port 25GE1/0/13 downlink 13\s*\n\s*'
+                        'port 25GE1/0/14 downlink 14\s*\n\s*'
+                        'port 25GE1/0/15 downlink 15\s*\n\s*'
+                        'port 25GE1/0/16 downlink 16\s*\n\s*'
+                        'port 25GE1/0/17 downlink 17\s*\n\s*'
+                        'port 25GE1/0/18 downlink 18\s*\n\s*'
+                        'port 25GE1/0/19 downlink 19\s*\n\s*'
+                        'port 25GE1/0/20 downlink 20\s*\n\s*'
+                        'port 25GE1/0/21 downlink 21\s*\n\s*'
+                        'port 25GE1/0/22 downlink 22\s*\n\s*'
+                        'port 25GE1/0/23 downlink 23\s*\n\s*'
+                        'port 25GE1/0/24 downlink 24\s*\n\s*'
+                        'port 25GE1/0/25 downlink 25\s*\n\s*'
+                        'port 25GE1/0/26 downlink 26\s*\n\s*'
+                        'port 25GE1/0/27 downlink 27\s*\n\s*'
+                        'port 25GE1/0/28 downlink 28\s*\n\s*'
+                        'port 25GE1/0/29 downlink 29\s*\n\s*'
+                        'port 25GE1/0/30 downlink 30\s*\n\s*'
+                        'port 25GE1/0/31 downlink 31\s*\n\s*'
+                        'port 25GE1/0/32 downlink 32\s*\n\s*'
+                        'port 25GE1/0/33 downlink 33\s*\n\s*'
+                        'port 25GE1/0/34 downlink 34\s*\n\s*'
+                        'port 25GE1/0/35 downlink 35\s*\n\s*'
+                        'port 25GE1/0/36 downlink 36\s*\n\s*'
+                        'port 25GE1/0/37 downlink 37\s*\n\s*'
+                        'port 100GE1/0/3 downlink 103\s*\n\s*'
+                        'port 100GE1/0/7 downlink 107\s*\n\s*'
+                        'timer recover-time 40',
+                        fileTxt)
+                    if checkItems['type'] in ['Slf']:
+                        if matchMonitorLinkSlfInfo:
+                            checkResult.append('通过')
+                        else:
+                            checkResult.append('未通过')
                     else:
-                        checkResult.append('未通过')
+                        if matchMonitorLinkInfo:
+                            checkResult.append('通过')
+                        else:
+                            checkResult.append('未通过')
                 else:
                     checkResult.append('不涉及')
 
