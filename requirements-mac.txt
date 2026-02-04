@@ -1,0 +1,14 @@
+about-time==4.2.1
+alive-progress==3.3.0
+bcrypt==5.0.0
+cffi==2.0.0
+cryptography==46.0.3
+et_xmlfile==2.0.0
+graphemeu==0.7.2
+invoke==2.2.1
+openpyxl==3.1.5
+paramiko==4.0.0
+pycparser==2.23
+PyNaCl==1.6.2
+pythonping==1.1.4
+typing_extensions==4.15.0

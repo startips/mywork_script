@@ -1,25 +1,7 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
-from interface import deviceControl_auto, ping_check, get_value, revData_error, readTxt
-import re
-
-
-def infoDeal(data):  # 数据处理 返回list
-    data_local = data
-    result_dic = {}
-    result = []
-    readInfo = readTxt('read/Keywords.txt')  # 读取匹配关键字
-    for i in readInfo:
-        cell = i.split(',')
-        result_dic.update({cell[1]: ''})
-    revInfo = revData_error(data_local['dis current-configuration'])  # 判断是否有命令执行错误
-    if revInfo == 'NULL':
-        pass
-    else:
-        result.append(revInfo)
-    for key in result_dic:  # 转换到list
-        result.append(result_dic[key])
-    return result
+from interface import deviceControl_auto, ping_check, get_value
+import time
 
 
 def deviceSend(arg=[]):  # 配置检查
@@ -38,8 +20,15 @@ def deviceSend(arg=[]):  # 配置检查
         resData = conn.sendCmd_auto(cmds)
         result.append(resData['loginWay'])  # 登录方式
         try:  # 处理数据检查
-            result.extend(infoDeal(resData))
-            logger.get_log().info('%s 命令下发成功' % (device_ip))
+            logger.get_log().info('%s 回显:\n' % (device_ip))
+            # timeNow = time.strftime('%Y%m%d%H%M%S', time.localtime(time.time()))
+            with open('data/%s.log' % (des_local), 'a', encoding='utf-8') as f:  # 命令回显集中存成.log文件
+                for resKey, value in resData.items():  # 回显日志
+                    if resKey != 'loginWay':
+                        f.write('%s\n%s\n' % (resKey, value))
+                        logger.get_log().info('命令:%s\n回显结果:%s\n' % (resKey, value))
+            result.append('下发成功')
+            logger.get_log().info('%s 命令下发完成' % (device_ip))
         except Exception as e:
             result.append('下发失败 %s' % (e))
             logger.get_log().info('%s 下发失败 %s' % (device_ip, e))

@@ -6,7 +6,6 @@ from interface import excel, logg, autoThreadingPool, init, set_value, get_value
 import platform, time
 from alive_progress import alive_bar
 import os
-import pprint
 
 
 # import encodings.idna  # 解决python3.9 LookupError: unknown encoding: idna socket.gethostbyname(destination)
@@ -68,14 +67,9 @@ def funcAction1(data, logName, func, worker=30):  # 主模块
 
 def oringinDataFormat():  # 原始数据分类
     file_dir = 'read/config'
-
-    all_items = os.listdir(file_dir)
-    all_items_filter = []  # 过滤文件
-    for item in all_items:
-        if item.endswith(('.txt', '.log')):
-            all_items_filter.append(item)
+    all_items = [item for item in os.listdir(file_dir) if not item.startswith('.')]  # 去掉.开头的文件
     read_info = []  # 结果
-    for item in all_items_filter:
+    for item in all_items:
         name = item.replace('.txt', '').replace('.log', '')
         returnStr = returntype(name)
         returnStr.update({'name': name, 'filename': item})
@@ -624,15 +618,12 @@ def platform_select():  # 判断当前运行环境
 
 
 def start_action():  # windows功能入口
-    print('release:v1.9.2')
+    print('release:v1.9.3')
     print(
         '程序功能如下：\n'
         '1.登陆配置检查（根据keyWords.txt里的关键字）\n'
-        '2.已获得配置文件检查\n'
+        '2.采集配置文件检查\n'
         '3.下发配置\n')
-    # '4.获取所有配置（current-configuration）\n'
-    # '5.zabbix监控项导入\n'
-    # '6.配置采集（根据keyWords.txt里的正则表达式匹配）')
     while True:
         if 'Linux' in platform.system():
             import sys

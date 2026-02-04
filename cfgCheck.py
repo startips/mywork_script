@@ -579,12 +579,15 @@ def checkOptions(fileTxt, checkItems):  # 具体检查项
                         if matchPeerlinkEth and len(matchPeerlinkPortSlf) == 8:  # Sleaf8个端口
                             checkResult.append('通过')
                         else:
+                            # print(checkItems)
                             checkResult.append('未通过')
                     else:
                         if matchPeerlinkEth and len(matchPeerlinkPort) == 2:
                             checkResult.append('通过')
                         else:
                             checkResult.append('未通过')
+                            # print(bool(matchPeerlinkEth),len(matchPeerlinkPort))
+                            # print(checkItems)
                 else:
                     checkResult.append('不涉及')
 
