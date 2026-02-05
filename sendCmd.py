@@ -9,7 +9,11 @@ def deviceSend(arg=[]):  # 配置检查
     device_user = arg[0]
     device_pass = arg[1]
     des_local = arg[3]
-    cmds = arg[4]  # 命令
+    if ',' in arg[4]:#命令
+        cmds = arg[4].split(',')
+    else:
+        cmds = [arg[4]]
+    # print(cmds)
     logger = get_value('logger')
     conn = deviceControl_auto(device_ip, device_user, device_pass)  # 登陆
     logger.get_log().info('%s 登陆成功' % (device_ip))
@@ -22,7 +26,7 @@ def deviceSend(arg=[]):  # 配置检查
         try:  # 处理数据检查
             logger.get_log().info('%s 回显:\n' % (device_ip))
             # timeNow = time.strftime('%Y%m%d%H%M%S', time.localtime(time.time()))
-            with open('data/%s.log' % (des_local), 'a', encoding='utf-8') as f:  # 命令回显集中存成.log文件
+            with open('data/%s_%s.log' % (device_ip, des_local), 'a', encoding='utf-8') as f:  # 命令回显集中存成.log文件
                 for resKey, value in resData.items():  # 回显日志
                     if resKey != 'loginWay':
                         f.write('%s\n%s\n' % (resKey, value))

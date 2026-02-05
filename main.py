@@ -689,7 +689,7 @@ def start_action():  # windows功能入口
             break
         if functionSelect == '3':
             fileName = 'devices_ip.xlsx'
-            title = ['IP', 'Description', 'PingStatus(ms)', 'accessMode']  # 保存的sheet标题
+            title = ['IP', 'Description', 'PingStatus(ms)', 'accessMode', 'result']  # 保存的sheet标题
             savename = 'sendCmd'
             print('1).确认IP等信息已填入read\devices_ip.xlsx\n'
                   '3).输入账户,密码')
