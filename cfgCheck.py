@@ -25,9 +25,31 @@ def deviceCheck(arg):  # 检查
 def checkOptions(fileTxt, checkItems):  # 具体检查项
     logger = get_value('logger')
     checkResult = []  # 检查结果
+
+    devSysnameMatch = re.search(r'#\s*\n\s*sysname (\S+)\s*\n\s*#', fileTxt, re.IGNORECASE)  # 设备sysname
+    if devSysnameMatch:
+        checkResult.append(devSysnameMatch.group(1))
+    else:
+        checkResult.append('未匹配到')
+
+    devTypeMatch = re.search(r'interface MEth\S+\s*\n\s*'
+                             'description \S+\s*\n\s*'
+                             'ip binding vpn-instance \S+\s*\n\s*'
+                             'ip address (\d+\.\d+\.\d+\.\d+) \d+\.\d+\.\d+\.\d+', fileTxt, re.IGNORECASE)  # 设备ip
+    if devTypeMatch:
+        checkResult.append(devTypeMatch.group(1))
+    else:
+        checkResult.append('未匹配到')
+
+    devIpMatch = re.search(r'HUAWEI (\S+) uptime is', fileTxt, re.IGNORECASE)  # 设备型号
+    if devIpMatch:
+        checkResult.append(devIpMatch.group(1))
+    else:
+        checkResult.append('未匹配到')
+
     for checkItem, value in checkItems['checkOption'].items():  # 遍历检查项
         logger.get_log().info(f'{checkItems["name"]}的检查项\"{checkItem}\"设置为\"{value}\",开始检查')
-        match checkItem:
+        match checkItem:  # 按条件筛选匹配
             case '版本':
                 if value == 1:
                     # 执行版本检查逻辑
@@ -38,7 +60,6 @@ def checkOptions(fileTxt, checkItems):  # 具体检查项
                         verinfo = '未匹配到'
                     checkResult.append(verinfo)
                 else:
-                    logger.get_log().info('%s 开始检查' % checkItems['name'])
                     checkResult.append('不涉及')
 
             case '补丁':
@@ -210,7 +231,12 @@ def checkOptions(fileTxt, checkItems):  # 具体检查项
                             fileTxt):
                         checkResult.append('通过')
                     else:
-                        checkResult.append('未通过')
+                        # 排除 CE6866 和 k8s vlanif
+                        if (genCheckOtion('HUAWEI CE6866\S+ uptime is', fileTxt) or
+                                genCheckOtion('interface Vlanif\d+\s*\n\s*description\s+.*?k8s', fileTxt)):
+                            checkResult.append('不涉及')
+                        else:
+                            checkResult.append('未通过')
                 else:
                     checkResult.append('不涉及')
 

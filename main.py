@@ -647,8 +647,11 @@ def start_action():  # windows功能入口
             writeToExcel(savename, title, data)
             break
         if functionSelect == '2':  # 配置比对
-            title = ['IP',
+            title = ['设备名',
                      '设备类型',
+                     'sysname',
+                     '管理IP',
+                     '型号',
                      '版本',
                      '补丁',
                      '多余文件检查',
