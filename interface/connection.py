@@ -189,7 +189,7 @@ class deviceControl_auto(deviceControl):  # 继承deviceControl的简洁登录 S
         deviceControl.__init__(self, ip, username, password, port)
 
     def sendCmd_auto(self, cmd_list: list):  # 使用Telnet SSH 执行多条命令返回结果
-        cmd_local = list(set(cmd_list))  # 去重复list
+        cmd_local = list(dict.fromkeys(cmd_list))  # 去重复list
         result = {}  # 命令返回的结果
         ssh_login = deviceControl.connectDevice(self)  # 使用父类SSH登录
         if ssh_login:

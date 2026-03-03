@@ -1,7 +1,5 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
-from unicodedata import name
-
 from interface import get_value, readTxt
 import re
 
