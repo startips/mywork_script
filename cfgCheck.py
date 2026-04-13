@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
-from interface import get_value, readTxt
+from interface import get_value
 import re
 
 
@@ -9,7 +9,7 @@ def deviceCheck(arg):  # 检查
     data_local = arg
     result = [data_local['name'], data_local['type']]
     try:  # 读取文件内容
-        with open('read/config/%s' % data_local['filename'], 'r', encoding='utf-8') as f:
+        with open('read/config/%s' % data_local['filename'], 'r', encoding='utf-8', errors='ignore') as f:
             fileTxt = f.read()
     except Exception as e:
         logger.get_log().error('%s 读取文件失败 %s' % (data_local['name'], e))
@@ -39,7 +39,7 @@ def checkOptions(fileTxt, checkItems):  # 具体检查项
     else:
         checkResult.append('未匹配到')
 
-    devIpMatch = re.search(r'HUAWEI (\S+) uptime is', fileTxt, re.IGNORECASE)  # 设备型号
+    devIpMatch = re.search(r'HUAWEI (\S+) (?:Routing Switch)?\s*uptime is', fileTxt, re.IGNORECASE)  # 设备型号
     if devIpMatch:
         checkResult.append(devIpMatch.group(1))
     else:
@@ -63,7 +63,7 @@ def checkOptions(fileTxt, checkItems):  # 具体检查项
             case '补丁':
                 if value == 1:
                     # 执行补丁检查逻辑
-                    matchPatInfo = re.findall(r'Patch Package Version \:(\S+)', fileTxt)
+                    matchPatInfo = re.findall(r'Patch Package Version\s?\:(\S+)', fileTxt)
                     if matchPatInfo:
                         patInfo = matchPatInfo[0]
                     else:
@@ -75,18 +75,23 @@ def checkOptions(fileTxt, checkItems):  # 具体检查项
             case '多余文件检查':
                 if value == 1:
                     # 多余文件检查逻辑
-                    verCount = len(re.findall(r'\d+\s+\S+\s+\S+\s+\S+\s\d+\s\d+\s\d+\:\d+\:\d+\s+\S+\.cc', fileTxt,
-                                              re.IGNORECASE))  # 统计文件数量
-                    patCount = len(re.findall(r'\d+\s+\S+\s+\S+\s+\S+\s\d+\s\d+\s\d+\:\d+\:\d+\s+\S+\.pat', fileTxt,
-                                              re.IGNORECASE))
-                    cfgCount = len(re.findall(r'\d+\s+\S+\s+\S+\s+\S+\s\d+\s\d+\s\d+\:\d+\:\d+\s+\S+\.cfg', fileTxt,
-                                              re.IGNORECASE))
-                    if verCount == 1 and patCount == 1 and cfgCount <= 1:
-                        allCount = '通过'
-                    elif verCount == 0 and patCount == 0 and cfgCount == 0:
-                        allCount = '未匹配到'
+                    matchDirInfo = re.search(r'Directory of flash[\s\S]*?<', fileTxt, re.IGNORECASE)  # 匹配dir字段
+                    if matchDirInfo:
+                        dirInfo = matchDirInfo.group()
+                        verCount = len(re.findall(r'\d+\s+\S+\s+\S+\s+\S+\s\d+\s\d+\s\d+\:\d+\:\d+\s+\S+\.cc', dirInfo,
+                                                  re.IGNORECASE))  # 统计文件数量
+                        patCount = len(re.findall(r'\d+\s+\S+\s+\S+\s+\S+\s\d+\s\d+\s\d+\:\d+\:\d+\s+\S+\.pat', dirInfo,
+                                                  re.IGNORECASE))
+                        cfgCount = len(re.findall(r'\d+\s+\S+\s+\S+\s+\S+\s\d+\s\d+\s\d+\:\d+\:\d+\s+\S+\.cfg', dirInfo,
+                                                  re.IGNORECASE))
+                        if verCount == 1 and patCount == 1 and cfgCount <= 1:
+                            allCount = '通过'
+                        elif verCount == 0 and patCount == 0 and cfgCount == 0:
+                            allCount = '未匹配到'
+                        else:
+                            allCount = 'cc:%d,pat:%d,cfg:%d' % (verCount, patCount, cfgCount)
                     else:
-                        allCount = 'cc:%d,pat:%d,cfg:%d' % (verCount, patCount, cfgCount)
+                        allCount = '未匹配到'
                     checkResult.append(allCount)
                 else:
                     checkResult.append('不涉及')
@@ -326,7 +331,8 @@ def checkOptions(fileTxt, checkItems):  # 具体检查项
                     matchOob = re.search(
                         r'#\s*\n\s*'
                         r'ip vpn-instance OOB\s*\n\s*'
-                        r'ipv4-family\s*\n\s*route-distinguisher 200:1\s*\n\s*'
+                        r'ipv4-family\s*\n\s*'
+                        r'(route-distinguisher 200:1\s*\n\s*)?'
                         r'#',
                         fileTxt,
                         re.IGNORECASE)
@@ -426,7 +432,7 @@ def checkOptions(fileTxt, checkItems):  # 具体检查项
                     if matchbgpGenInfo:
                         checkResult.append('通过')
                     else:
-                        checkResult.append('不通过')
+                        checkResult.append('未通过')
                 else:
                     checkResult.append('不涉及')
 

@@ -253,10 +253,19 @@ class excel:  # Excel表格处理 只支持.xlsx格式
             cell.font = title_font
         for row_data in data_local:
             try:
+                # print(row_data)
                 wsObj.append(row_data)  # 写入数据
             except:
                 for row in row_data:
                     wsObj.append(row)
+        ###标记颜色
+        red_font = Font(color="FFFF0000")
+        for row in wsObj.iter_rows(min_row=2):  # 从第2行开始（跳过标题）
+            for cell in row:
+                value = cell.value
+                # 规则
+                if value in ['未通过']:
+                    cell.font = red_font
 
     def excel_creat(self, title, sheetname='data01', sheetIndex=1):  # 创建对象并设置好列头
         self.wb_obj = Workbook()
@@ -287,7 +296,7 @@ class excel:  # Excel表格处理 只支持.xlsx格式
     # 读取数据 默认打开第一个sheet从第二行读
     def excel_read(self, sheetnum=1, row=0, column=0, row_start=2, column_start=1):
         file_local = self.filename
-        wb = load_workbook(filename=file_local)  # 打开一个excel对象
+        wb = load_workbook(filename=file_local,data_only=True)  # 打开一个excel对象
         sheetnames = wb.sheetnames  # 获取sheets
         ws = wb[sheetnames[sheetnum - 1]]  # 打开第X个sheet
         row_start_local = row_start  # 起始行
@@ -309,10 +318,15 @@ class excel:  # Excel表格处理 只支持.xlsx格式
     def excelReadCread(self, ):  # 打开excel对象
         file_local = self.filename
         self.wb = load_workbook(filename=file_local)  # 打开一个excel对象
+        sheetNums = self.wb.sheetnames
+        return sheetNums
 
     def excelReadSheet(self, sheetnum=1, row=0, column=0, row_start=2, column_start=1):  # 读取一个sheet
         sheetnames = self.wb.sheetnames  # 获取sheets
-        ws = self.wb[sheetnames[sheetnum - 1]]  # 打开第X个sheet
+        if type(sheetnum) == int:
+            ws = self.wb[sheetnames[sheetnum - 1]]  # 打开第X个sheet
+        else:
+            ws = self.wb[sheetnum]  # 直接用名字打开表格
         row_start_local = row_start  # 起始行
         column_start_local = column_start  # 起始列
         if row == 0:

@@ -13,7 +13,6 @@ def deviceSend(arg=[]):  # 配置检查
         cmds = arg[4].split(',')
     else:
         cmds = [arg[4]]
-    # print(cmds)
     logger = get_value('logger')
     conn = deviceControl_auto(device_ip, device_user, device_pass)  # 登陆
     logger.get_log().info('%s 登陆成功' % (device_ip))
