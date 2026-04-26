@@ -55,7 +55,7 @@ class deviceControl:  # 交换机登陆模块
 
     def sendCmd(self, cmd):  # 发送命令(PS:加上了回车符)，返回发送的字节数
         _cmd = cmd
-        status = self.ssh_shell.send(' %s\n' % _cmd)
+        status = self.ssh_shell.send(_cmd + '\n')
         return status
 
     def recData(self):  # 接受返回数据
@@ -296,7 +296,7 @@ class excel:  # Excel表格处理 只支持.xlsx格式
     # 读取数据 默认打开第一个sheet从第二行读
     def excel_read(self, sheetnum=1, row=0, column=0, row_start=2, column_start=1):
         file_local = self.filename
-        wb = load_workbook(filename=file_local,data_only=True)  # 打开一个excel对象
+        wb = load_workbook(filename=file_local, data_only=True)  # 打开一个excel对象
         sheetnames = wb.sheetnames  # 获取sheets
         ws = wb[sheetnames[sheetnum - 1]]  # 打开第X个sheet
         row_start_local = row_start  # 起始行

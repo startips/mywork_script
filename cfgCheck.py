@@ -498,7 +498,27 @@ def checkOptions(fileTxt, checkItems):  # 具体检查项
                             'ssh client cipher aes256_gcm aes128_gcm aes256_ctr aes192_ctr aes128_ctr\s*\n\s*'
                             'ssh client hmac sha2_512 sha2_256\s*\n\s*'
                             'ssh client key-exchange dh_group_exchange_sha256 dh_group16_sha512',
-                            fileTxt):
+                            fileTxt) or genCheckOtion('stelnet server enable\s*\n\s*'
+                                                      'ssh server rsa-key min-length 3072\s*\n\s*'
+                                                      'undo ssh server authentication-type keyboard-interactive enable\s*\n\s*'
+                                                      'ssh server-source all-interface\s*\n\s*'
+                                                      'undo ssh ipv6 server-source all-interface\s*\n\s*'
+                                                      'ssh authorization-type default aaa\s*\n\s*'
+                                                      '#\s*\n\s*'
+                                                      'ssh server cipher aes256_gcm aes128_gcm aes256_ctr aes192_ctr aes128_ctr aes256_cbc aes128_cbc 3des_cbc\s*\n\s*'
+                                                      'ssh server hmac sha2_512 sha2_256_96 sha2_256 sha1 sha1_96 md5 md5_96\s*\n\s*'
+                                                      'ssh server key-exchange dh_group_exchange_sha256 dh_group_exchange_sha1 dh_group14_sha1 dh_group1_sha1 ecdh_sha2_nistp256 ecdh_sha2_nistp384 ecdh_sha2_nistp521 sm2_kep dh_group16_sha512\s*\n\s*'
+                                                      '#\s*\n\s*'
+                                                      'ssh server publickey dsa ecc rsa rsa_sha2_256 rsa_sha2_512\s*\n\s*'
+                                                      '#\s*\n\s*'
+                                                      'ssh server dh-exchange min-len 2048\s*\n\s*'
+                                                      '#\s*\n\s*'
+                                                      'ssh client publickey ecc rsa_sha2_256 rsa_sha2_512\s*\n\s*'
+                                                      '#\s*\n\s*'
+                                                      'ssh client cipher aes256_gcm aes128_gcm aes256_ctr aes192_ctr aes128_ctr\s*\n\s*'
+                                                      'ssh client hmac sha2_512 sha2_256\s*\n\s*'
+                                                      'ssh client key-exchange dh_group_exchange_sha256 dh_group16_sha512\s*\n\s*',
+                                                      fileTxt):
                         checkResult.append('通过')
                     else:
                         checkResult.append('未通过')
@@ -547,7 +567,7 @@ def checkOptions(fileTxt, checkItems):  # 具体检查项
                     # 执行hash配置检查逻辑
                     if genCheckOtion('#\s*\n\s*'
                                      'load-balance ecmp\s*\n\s*'
-                                     'hashmode underlay 2\s*\n\s*'
+                                     'hashmode (underlay)? 2\s*\n\s*'
                                      '#', fileTxt):
                         checkResult.append('通过')
                     else:

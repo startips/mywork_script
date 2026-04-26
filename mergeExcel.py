@@ -6,11 +6,11 @@ from pathlib import Path
 from interface import excel
 
 
-def mergeData():  # 汇总所有数据到
+def mergeData():  # 汇总所有数据到一个表
     # --- 配置区域 ---
-    source_dir = '/Users/shadowx/Documents/招行/巡检/2026Q1/20260324'  # 存放压缩包的目录
+    source_dir = '/Users/shadowx/Documents/招行/巡检/2026五一节前巡检/巡检报告'  # 存放压缩包的目录
     output_file = 'data/巡检成功数据汇总'  # 输出文件名
-    temp_extract_dir = '/Users/shadowx/Documents/招行/巡检/2026Q1/20260324/temp_extract'  # 临时解压目录
+    temp_extract_dir = '/Users/shadowx/Documents/招行/巡检/2026五一节前巡检/巡检报告/temp_extract'  # 临时解压目录
     target_sub_path = "NetWork Healthy Check Report(Engineer).xlsx"  # 目标文件
     dataall = []
     if not os.path.exists(source_dir):
@@ -68,15 +68,15 @@ def mergeData():  # 汇总所有数据到
         title=['网元名称', '网元分组', '网元类型', '版本信息', '补丁信息', '评估场景', '网元IP', 'ESN号'], data=dataall,
         sheetname='巡检网元汇总')
     dataWr.save_file()
-    shutil.rmtree(temp_extract_dir)  # 删除临时文件
+    # shutil.rmtree(temp_extract_dir)  # 删除临时文件
 
 
 def collect_and_split_zip():  # 提取文件并压缩分片
     # --- 配置区域 ---
-    source_dir = '/Users/shadowx/Documents/招行/巡检/2026Q1/20260324'
-    temp_extract_dir = os.path.expanduser('/Users/shadowx/Documents/招行/巡检/2026Q1/20260324/temp_extract')
+    source_dir = '/Users/shadowx/Documents/招行/巡检/2026五一节前巡检/巡检报告'
+    temp_extract_dir = os.path.expanduser('/Users/shadowx/Documents/招行/巡检/2026五一节前巡检/巡检报告/temp_extract')
     # 新增：用于存放准备压缩的文件的文件夹
-    collect_dir = os.path.expanduser('/Users/shadowx/Documents/招行/巡检/2026Q1/20260324/collected_reports')
+    collect_dir = os.path.expanduser('/Users/shadowx/Documents/招行/巡检/2026五一节前巡检/巡检报告/collected_reports')
     # 最终压缩包名称（不带后缀）
     output_zip_name = "巡检数据分析汇总"
     # 分片大小
@@ -143,7 +143,7 @@ def collect_and_split_zip():  # 提取文件并压缩分片
 
 def mergeOriginalData():  # 汇总原始表格数据
     # --- 配置区域 ---
-    source_file = '/Users/shadowx/Documents/招行/巡检/2026Q1/巡检设备清单汇总20260318更新.xlsx'  # 原始文件
+    source_file = '/Users/shadowx/Documents/招行/巡检/2026五一节前巡检/巡检设备清单汇总20260413更新.xlsx'  # 原始文件
     data = []
     openExcel = excel(source_file)
     sheetnames = openExcel.excelReadCread()
@@ -153,15 +153,65 @@ def mergeOriginalData():  # 汇总原始表格数据
             continue
         print(f'正在处理sheet\'{sheetname}\'')
         num += 1
-        res = openExcel.excelReadSheet(sheetnum=sheetname, column=4)
+        res = openExcel.excelReadSheet(sheetnum=sheetname, column=5)
         data.extend(res)
     print(f'处理完成...共汇总{num}个sheet')
     openExcel.excelClose()
     excelObj = excel('data/巡检原始数据汇总')
-    excelObj.excel_write(title=['登陆IP', '登陆用户名', 'AB角色', '备注'], data=data,sheetname='巡检原始数据')
+    excelObj.excel_write(title=['登陆IP', '登陆用户名', 'AB角色', '备注', '时间'], data=data, sheetname='巡检原始数据')
     excelObj.save_file()
 
 
+def merge_zip_txt_files():  # 汇总配置文件到一个文件夹
+    # 配置区
+    zip_dir_path = '/Users/shadowx/Documents/招行/巡检/2026五一节前巡检/巡检报告'
+    output_dir_path = '/Users/shadowx/Documents/招行/巡检/设备配置文件汇总'
+
+    # 代码区
+    base_path, target_path = Path(zip_dir_path).resolve(), Path(output_dir_path).resolve()
+    temp_extract_path = base_path / "temp_extract_cache"
+    target_path.mkdir(parents=True, exist_ok=True)
+    zip_files = list(base_path.glob("*.zip"))
+    if not zip_files:
+        print(f"[提示] 未找到 .zip 文件");
+        return
+    total_count = 0  # 初始化总计数器
+    print(f"[开始] 处理 {len(zip_files)} 个压缩包...")
+    for idx, zip_file in enumerate(zip_files, 1):
+        print(f"[{idx}/{len(zip_files)}] 正在处理: {zip_file.name}")
+        try:
+            with zipfile.ZipFile(zip_file, 'r') as zip_ref:
+                for file_info in zip_ref.infolist():
+                    try:
+                        # 纠正中文乱码
+                        file_info.filename = file_info.filename.encode('cp437').decode('gbk')
+                    except:
+                        pass
+                    zip_ref.extract(file_info, temp_extract_path)
+            top_folders = [f for f in temp_extract_path.iterdir() if f.is_dir() and not f.name.startswith((".", "__"))]
+            if top_folders:
+                target_dir = top_folders[0] / "资产报告/设备配置"
+                if target_dir.exists():
+                    txt_files = list(target_dir.glob("*.txt"))
+                    for txt_file in txt_files:
+                        shutil.move(str(txt_file), str(target_path / txt_file.name))
+                    current_zip_count = len(txt_files)
+                    total_count += current_zip_count
+                    print(f"  └─ 成功提取 {current_zip_count} 个文件")
+                else:
+                    print(f"  [跳过] 未找到路径: 资产报告/设备配置")
+        except Exception as e:
+            print(f"  [错误] {zip_file.name} 处理异常: {e}")
+        if temp_extract_path.exists():
+            shutil.rmtree(temp_extract_path)
+    print("-" * 30)
+    print(f"[完成] 任务结束！")
+    print(f"[统计] 累计提取 .txt 文件总数: {total_count}")
+    print(f"[路径] 汇总目录: {target_path}")
+
+
 if __name__ == "__main__":
-    # collect_and_split_zip()
-    mergeOriginalData()
+    # collect_and_split_zip() # 解压zip获取报告并打包
+    # mergeOriginalData() # 汇总原始数据
+    # mergeData() # 合并巡检后的数据到一个excel
+    merge_zip_txt_files()  # 汇总巡检后的配置文件
