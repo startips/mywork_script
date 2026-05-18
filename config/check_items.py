@@ -3,9 +3,6 @@
 """
 配置检查项定义模块
 
-将 main.py 中 returntype() 函数里 14 个设备类型重复的 33 项 dict 定义，
-集中为数据驱动的配置表，消除约 440 行重复代码。
-
 使用方法：
     from config.check_items import DEVICE_TYPE_CONFIGS, DEVICE_TYPE_PATTERNS
     config = DEVICE_TYPE_CONFIGS['Spine']  # 获取 Spine 类型的检查项配置

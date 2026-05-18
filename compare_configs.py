@@ -1,14 +1,14 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 """
-compare_configs.py - 华为交换机配置下发验证比对工具
+compare_configs.py - 网络设备配置下发验证比对工具
 
 功能：
-  将意图配置（.cfg）与局点采集的配置（.log）进行对比，
+  将原始配置（.cfg）与局点采集的配置（.log）进行对比，
   检测"我配了但局点没刷上去"的差异，过滤三类假阳性差异后输出报告。
 
 使用方式：
-  1. 将你出的 .cfg 意图配置文件放入 read/config_intended/
+  1. 将你出的 .cfg 原始配置文件放入 read/config_intended/
   2. 局点采集的 .log 文件放 read/config/
   3. 运行: python3 compare_configs.py
   4. 报告输出到 log/ 目录
@@ -245,7 +245,7 @@ def _strip_ip_prefix(filename):
     去掉 .log 文件名开头的 IP 前缀。
 
     局点采集的文件名格式：IP_设备名.log（如 12.255.190.206_SZBL1D4FC01U31-DCN-DC1_BMC-ACC.log）
-    意图配置文件名格式：设备名.cfg（如 SZBL1D4FC01U31-DCN-DC1_BMC-ACC.cfg）
+    原始配置文件名格式：设备名.cfg（如 SZBL1D4FC01U31-DCN-DC1_BMC-ACC.cfg）
 
     只有去掉 IP 前缀后才能配对。
 
@@ -291,7 +291,7 @@ def _extract_device_info(text):
     # 提取版本号（同 cfgCheck.py._check_version）
     # 示例：Version 5.170 (S5731 V200R024C00SPC500)
     #        Version 8.191 (CE8860EI V200R019C10SPC800)
-    match_list = re.findall(r'Version \S+ \((\S+ \S+)\)', text)
+    match_list = re.findall(r'Version \S+ \(\S+ (\S+)\)', text)
     if match_list:
         info['version'] = match_list[0]
     else:
@@ -394,7 +394,7 @@ def _is_relevant_line(line):
 
 def _compare_configs(cfg_lines, log_lines, rules, device_info=None):
     """
-    核心比对逻辑：逐行比对意图配置 vs 采集配置。
+    核心比对逻辑：逐行比对原始配置 vs 采集配置。
 
     流程：
       1. 两边都清洗（去空白、归一化密码）
@@ -457,7 +457,6 @@ def _compare_configs(cfg_lines, log_lines, rules, device_info=None):
     for lineno, line in cleaned_log:
         key = line.lower()
         log_lower_map.setdefault(key, []).append((lineno, line))
-
     # 比对：.cfg 有的，看看 .log 有没有（大小写不敏感）
     missing = []
     for lineno, line in cleaned_cfg:
@@ -512,7 +511,7 @@ def main():
       6. 生成报告
     """
     print("=" * 60)
-    print("  华为交换机配置下发验证比对工具")
+    print("  网络设备配置下发验证比对工具")
     print("=" * 60)
 
     # 加载规则
@@ -523,12 +522,12 @@ def main():
     cfg_files = glob.glob(os.path.join(CFG_DIR, '*.cfg'))
     log_files = glob.glob(os.path.join(LOG_DIR, '*.log'))
 
-    print(f"[INFO] 意图配置(.cfg): {len(cfg_files)} 个文件")
+    print(f"[INFO] 原始配置(.cfg): {len(cfg_files)} 个文件")
     print(f"[INFO] 采集配置(.log): {len(log_files)} 个文件")
 
     if not cfg_files:
         print(f"\n[ERROR] config_intended/ 目录下没有 .cfg 文件！")
-        print(f"        请将你的意图配置文件放到: {CFG_DIR}")
+        print(f"        请将你的原始配置文件放到: {CFG_DIR}")
         print(f"        文件命名格式: 设备名.cfg（如 SZBL1D4FC01U31-DCN-DC1_BMC-ACC.cfg）")
         return
 
@@ -560,21 +559,23 @@ def main():
     report_lines.append(f"  配置下发验证比对报告  {timestamp}")
     report_lines.append("=" * 70)
     report_lines.append("")
-    report_lines.append(f"  意图配置目录: {CFG_DIR}")
+    report_lines.append(f"  原始配置目录: {CFG_DIR}")
     report_lines.append(f"  采集配置目录: {LOG_DIR}")
     report_lines.append(f"  忽略规则文件: {IGNORE_RULES_FILE}")
     report_lines.append("")
 
     # 遍历每个 .cfg 文件，找对应的 .log 做比对
-    for dev_name in sorted(cfg_map.keys()):
+    for idx, dev_name in enumerate(sorted(cfg_map.keys()), 1):
         total_devices += 1
         cfg_path = cfg_map[dev_name]
 
         if dev_name not in log_map:
             no_log_devices.append(dev_name)
+            print(f"  [{idx}/{len(cfg_map)}] {dev_name} — ⚠ 未找到对应 .log 文件")
             continue
 
         log_path = log_map[dev_name]
+        print(f"  [{idx}/{len(cfg_map)}] {dev_name} — 正在比对...", end='')
 
         # 读取 .cfg
         with open(cfg_path, 'r', encoding='utf-8', errors='replace') as f:
@@ -599,11 +600,13 @@ def main():
         # 执行比对（传入 device_info 支持差异化规则）
         missing, extra = _compare_configs(cfg_lines, log_config_lines, rules, device_info)
 
-        # 输出该设备的结果
+        # 输出该设备的结果（仅屏幕提示，具体差异写报告）
         if not missing and not extra:
             clean_devices.append(dev_name)
+            print(f"✅ 一致")
         else:
             diff_devices.append(dev_name)
+            print(f"⚠ 有差异 (缺失{len(missing)}条, 多余{len(extra)}条)")
             report_lines.append(f"\n{'─' * 70}")
             # 设备名后附型号和版本
             model_str = device_info.get('model') or '未知型号'
@@ -654,8 +657,12 @@ def main():
     if no_log_devices:
         report_lines.append(f"\n  未采集（仅有 .cfg 无对应 .log）: {len(no_log_devices)} 台")
 
-    # 输出到屏幕
-    print('\n'.join(report_lines))
+    # 输出汇总到屏幕（具体差异内容见报告文件）
+    print()
+    print(f"  {'='*40}")
+    print(f"  比对完成：共 {total_devices} 台设备")
+    print(f"  完全一致 {len(clean_devices)} 台 | 存在差异 {len(diff_devices)} 台 | 未采集 {len(no_log_devices)} 台")
+    print(f"  {'='*40}")
 
     # 写入文件
     os.makedirs(REPORT_DIR, exist_ok=True)
