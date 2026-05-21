@@ -25,21 +25,32 @@ def deviceSend(arg=[]):  # 配置检查
         try:  # 处理数据检查
             logger.get_log().info('%s 回显:\n' % (device_ip))
             # timeNow = time.strftime('%Y%m%d%H%M%S', time.localtime(time.time()))
-            with open('data/%s_%s.log' % (device_ip, des_local), 'w', encoding='utf-8') as f:  # 命令回显集中存成.log文件
+            cmd_result = {}
+            with open('data/%s_%s.log' % (device_ip, des_local), 'w', encoding='utf-8') as f:
                 for resKey, value in resData.items():  # 回显日志
                     if resKey != 'loginWay':
                         f.write('%s\n' % (value))
                         logger.get_log().info('命令:%s\n回显结果:%s\n' % (resKey, value))
-            result.append('下发成功')
-            logger.get_log().info('%s 命令下发完成' % (device_ip))
+                        cmd_result[resKey] = checkError(value)
+            cmd_result = {"\n".join(f"{k}:{v}" for k, v in cmd_result.items())}
+            result.append(cmd_result)  # 下发结果显示
+            logger.get_log().info('%s 命令下发完成,结果汇总：%s' % (device_ip, cmd_result))
         except Exception as e:
-            result.append('下发失败 %s' % (e))
-            logger.get_log().info('%s 下发失败 %s' % (device_ip, e))
+            result.append('数据处理异常 %s' % (e))
+            logger.get_log().info('%s 数据处理异常 %s' % (device_ip, e))
     except Exception as e:
         logger.get_log().error('%s 登陆失败 %s' % (device_ip, e))
         result.append('login fail')
     logger.get_log().info('%s 执行完成' % device_ip)
     return result
+
+
+def checkError(dataTxt):  # 命令报错识别
+    errorCode = ['Error: Unrecognized command found']
+    for error in errorCode:
+        if error in dataTxt:
+            return '失败'
+    return '成功'
 
 
 if __name__ == '__main__':

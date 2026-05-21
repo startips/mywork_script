@@ -26,6 +26,7 @@ env/
 # Data files (sensitive / generated)
 data/*.xlsx
 data/*.log
+data/*.md
 log/*.log
 
 
