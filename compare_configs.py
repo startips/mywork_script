@@ -569,7 +569,7 @@ def generate_report(results, timestamp):
     lines.append(f'| 项目 | 数量 |')
     lines.append(f'|------|------|')
     lines.append(f'| 比对设备 | {total_devices} 台 |')
-    lines.append(f'| 错误设备 | {len(error_devices)} 台 |')
+    lines.append(f'| 异常设备 | {len(error_devices)} 台 |')
     lines.append(f'| 无差异 | {zero_diff} 台 |')
     lines.append(f'| 有差异 | {len(ok_devices) - zero_diff} 台 |')
     lines.append(f'| 差异总计 | {total_diffs} 处 |')
@@ -584,9 +584,9 @@ def generate_report(results, timestamp):
             lines.append(f'| {short_name} | {model} | {version} | {count} |')
         lines.append('')
 
-    # 错误设备
+    # 异常设备
     if error_devices:
-        lines.append('### 错误设备\n')
+        lines.append('### 异常设备\n')
         for dev_name, err_msg in error_devices:
             lines.append(f'- **{dev_name}**: {err_msg}')
         lines.append('')
@@ -696,6 +696,16 @@ def main():
     # 加载规则
     print(f'\n[1/4] 加载规则: {RULES_PATH}')
     rules = load_rules(RULES_PATH)
+
+    # 读取 YAML 中的目录设置，未配置则用默认值
+    settings = rules.get('settings', {})
+    intended_dir = settings.get('intended_dir') or INTENDED_DIR
+    collected_dir = settings.get('collected_dir') or COLLECTED_DIR
+    output_dir = settings.get('output_dir') or OUTPUT_DIR
+    print(f'  → 预期配置: {intended_dir}')
+    print(f'  → 采集配置: {collected_dir}')
+    print(f'  → 报告输出: {output_dir}')
+
     secs = rules.get('sections', [])
     for s in secs:
         print(f'  → 段落: {s["name"]} ({s["regex"][:40]}...)')
@@ -705,7 +715,7 @@ def main():
 
     # 设备配对
     print(f'\n[2/4] 设备配对')
-    matched, only_intended, only_collected = match_devices(INTENDED_DIR, COLLECTED_DIR)
+    matched, only_intended, only_collected = match_devices(intended_dir, collected_dir)
     print(f'  → 匹配: {len(matched)} 台')
     if only_intended:
         print(f'  → 仅预期有（未采集）: {len(only_intended)} 台')
@@ -738,8 +748,8 @@ def main():
     print(f'\n[4/4] 生成报告...')
     ts = datetime.now().strftime('%Y-%m-%d_%H%M%S')
     report = generate_report(results, ts)
-    os.makedirs(OUTPUT_DIR, exist_ok=True)
-    report_path = os.path.join(OUTPUT_DIR, f'compareResult_{ts}.md')
+    os.makedirs(output_dir, exist_ok=True)
+    report_path = os.path.join(output_dir, f'compareResult_{ts}.md')
     with open(report_path, 'w', encoding='utf-8') as f:
         f.write(report)
     print(f'  报告已保存: {report_path}')
