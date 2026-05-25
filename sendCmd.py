@@ -24,7 +24,6 @@ def deviceSend(arg=[]):  # 配置检查
         result.append(resData['loginWay'])  # 登录方式
         try:  # 处理数据检查
             logger.get_log().info('%s 回显:\n' % (device_ip))
-            # timeNow = time.strftime('%Y%m%d%H%M%S', time.localtime(time.time()))
             cmd_result = {}
             with open('data/%s_%s.log' % (device_ip, des_local), 'w', encoding='utf-8') as f:
                 for resKey, value in resData.items():  # 回显日志
@@ -32,7 +31,7 @@ def deviceSend(arg=[]):  # 配置检查
                         f.write('%s\n' % (value))
                         logger.get_log().info('命令:%s\n回显结果:%s\n' % (resKey, value))
                         cmd_result[resKey] = checkError(value)
-            cmd_result = {"\n".join(f"{k}:{v}" for k, v in cmd_result.items())}
+            cmd_result = "\n".join(f"{k}:{v}" for k, v in cmd_result.items())
             result.append(cmd_result)  # 下发结果显示
             logger.get_log().info('%s 命令下发完成,结果汇总：%s' % (device_ip, cmd_result))
         except Exception as e:

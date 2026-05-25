@@ -100,7 +100,7 @@ ignore:
           version: 'V200R019'
       lines:
         - 'undo private-4-byte-as enable'
-
+    #用户界面
     - header_pattern: '^user-interface '
       models:
         - model: 'S5731'
