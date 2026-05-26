@@ -55,3 +55,10 @@ DEVICE_TYPE_PATTERNS = tuple(
     (pattern, type_name)
     for pattern, type_name in _data['device_patterns']
 )
+
+
+# ============================================================
+# CABLE_CHECK_CONFIG — 线路检查排除规则
+# ============================================================
+
+CABLE_CHECK_CONFIG = _data.get('cable_check', {})

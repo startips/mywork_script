@@ -229,7 +229,7 @@ def deleteUnknownStr(line_p):  # 删除垃圾字符，转义序列字符
             if line:
                 line = line[:-1]
         i += 1
-    line = re.sub('\s{2}---- More ----\s+', '', line)
+    line = re.sub('\s{2}---- More ----\s{16}', '', line)
     return line
 
 

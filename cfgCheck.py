@@ -11,7 +11,7 @@ cfgCheck.py - 华为交换机离线配置文件检查
     checkOptions(data, checkItems) - 调度器，按检查项分发到各 _check_xxx 函数
 """
 
-from interface import get_value, excel
+from interface import get_value, excel, CABLE_CHECK_CONFIG
 import re
 
 
@@ -427,6 +427,236 @@ def _check_alarm_active(fileTxt, checkItems):
 
 
 # ============================================================
+# 线路检查：对比 description 期望与 LLDP 实际邻居
+# ============================================================
+
+# 接口名前缀正则（用于匹配 description 和 LLDP 中的接口名）
+_IFACE_RE = re.compile(
+    r'(?:\d+GE|XGE|GE|XGigabitEthernet|GigabitEthernet|Eth-Trunk|MEth|LoopBack|NULL|Vlanif)\S+',
+    re.IGNORECASE
+)
+
+# 编译排除接口正则
+_exclude_iface_pats = [
+    re.compile(p, re.IGNORECASE) for p in CABLE_CHECK_CONFIG.get('exclude_interfaces', [])
+]
+_exclude_phy = set(CABLE_CHECK_CONFIG.get('exclude_phy', []))
+
+
+def _parse_description_section(fileTxt):
+    """
+    解析 display interface description 回显。
+
+    返回: {接口名: {'phy': 状态, 'description': 描述文本}}
+    只返回有描述且未被排除的接口。
+    """
+    # 定位 display interface description 段
+    section = re.search(
+        r'display interface description[^\n]*\n'
+        r'(?:PHY:[^\n]*\n|[*^#!-]down:[^\n]*\n|\([^\)]+\):[^\n]*\n)*'  # 跳过图例行
+        r'(Interface[^\n]*\n)'  # 表头
+        r'(.*?)(?=\n<|\Z)',  # 内容直到下一个 < 提示符
+        fileTxt, re.DOTALL | re.IGNORECASE
+    )
+    if not section:
+        return {}
+
+    content = section.group(2)
+    lines = content.split('\n')
+
+    result = {}
+    cur_intf = None
+    cur_phy = ''
+    cur_desc_lines = []
+
+    for line in lines:
+        line = line.rstrip('\r')
+        if not line.strip():
+            continue
+
+        # 检查是否是新的接口行（行首有接口名）
+        m = re.match(r'\s*((?:\d+GE|XGE|GE|XGigabitEthernet|GigabitEthernet|'
+                     r'Eth-Trunk|MEth|LoopBack|NULL|Vlanif)\S+)\s+'
+                     r'(\S+)\s+(\S+)\s*(.*)', line, re.IGNORECASE)
+        if m:
+            # 保存上一个接口
+            if cur_intf:
+                desc = ''.join(cur_desc_lines).strip()
+                if desc and not _should_exclude_intf(cur_intf, cur_phy):
+                    result[cur_intf] = {'phy': cur_phy, 'description': desc}
+
+            cur_intf = m.group(1)
+            cur_phy = m.group(2)
+            cur_desc_lines = [m.group(4)]
+        else:
+            # 折行：追加到当前接口的 description
+            if cur_intf:
+                cur_desc_lines.append(line.strip())
+
+    # 保存最后一个接口
+    if cur_intf:
+        desc = ''.join(cur_desc_lines).strip()
+        if desc and not _should_exclude_intf(cur_intf, cur_phy):
+            result[cur_intf] = {'phy': cur_phy, 'description': desc}
+
+    return result
+
+
+def _should_exclude_intf(intf_name, phy_status):
+    """判断接口是否应排除"""
+    if phy_status in _exclude_phy:
+        return True
+    for pat in _exclude_iface_pats:
+        if pat.search(intf_name):
+            return True
+    return False
+
+
+def _parse_description(desc_text):
+    """
+    从描述文本中提取期望设备名和接口名。
+
+    格式: To_<设备名>_<接口名>
+    返回: (设备名, 接口名或None)
+    """
+    if not desc_text.startswith('To_'):
+        return desc_text, None
+
+    after_to = desc_text[3:]  # 去掉 'To_'
+
+    # 找最后一个接口名模式
+    matches = list(_IFACE_RE.finditer(after_to))
+    if matches:
+        last_match = matches[-1]
+        device = after_to[:last_match.start()].rstrip('_')
+        port = last_match.group()
+        return device, port
+
+    # 没有接口名模式，整体作为设备名
+    return after_to, None
+
+
+def _parse_lldp_section(fileTxt):
+    """
+    解析 display lldp neighbor brief 回显。
+
+    支持三种格式：
+    A/B: Local Interface | Exptime(s) | Neighbor Interface | Neighbor Device
+    C:   Local Intf | Neighbor Dev | Neighbor Intf | Exptime(s)
+
+    返回: {本地接口: {'device': 对端设备, 'port': 对端接口}}
+    """
+    # 定位 LLDP 段
+    section = re.search(
+        r'display lldp neighbor brief[^\n]*\n'
+        r'(.*?)(?=\n<|\Z)',
+        fileTxt, re.DOTALL | re.IGNORECASE
+    )
+    if not section:
+        return {}
+
+    content = section.group(1)
+    lines = content.split('\n')
+
+    # 跳过表头和分隔线
+    header_line = None
+    data_start = 0
+    for i, line in enumerate(lines):
+        stripped = line.strip()
+        if not stripped:
+            continue
+        if stripped.startswith('Local'):
+            header_line = stripped
+            data_start = i + 1
+            break
+        if stripped.startswith('---'):
+            data_start = i + 1
+            break
+
+    if not header_line:
+        return {}
+
+    # 判断格式
+    # Format C: Exptime 在最后一列
+    is_format_c = header_line.rstrip().endswith('Exptime(s)')
+
+    result = {}
+    for line in lines[data_start:]:
+        line = line.rstrip('\r').strip()
+        if not line or line.startswith('<'):
+            break
+
+        parts = line.split()
+        if len(parts) < 4:
+            continue
+
+        if is_format_c:
+            # Format C: local_intf | neighbor_dev | neighbor_intf | exptime
+            local_intf = parts[0]
+            neighbor_dev = parts[1]
+            neighbor_intf = parts[2]
+        else:
+            # Format A/B: local_intf | exptime | neighbor_intf | neighbor_dev
+            local_intf = parts[0]
+            neighbor_intf = parts[2]
+            neighbor_dev = parts[3]
+
+        result[local_intf] = {'device': neighbor_dev, 'port': neighbor_intf}
+
+    return result
+
+
+def _check_cable(fileTxt, checkItems):
+    """
+    检查线路是否接错：对比 description 期望与 LLDP 实际邻居。
+
+    逻辑：
+    1. 解析 display interface description，提取有描述的物理口
+    2. 解析 display lldp neighbor brief，提取 LLDP 邻居
+    3. 对比：设备名不匹配 → 接错；无 LLDP 邻居 → 对端未上线
+
+    返回：
+        '通过'          — 所有有描述的端口与 LLDP 一致
+        '未匹配到'      — 没有找到 description 或 LLDP 段
+        str             — 问题列表，分号分隔
+    """
+    descriptions = _parse_description_section(fileTxt)
+    if not descriptions:
+        return '未匹配到'
+
+    lldp_neighbors = _parse_lldp_section(fileTxt)
+    if not lldp_neighbors:
+        return '未匹配到LLDP'
+
+    issues = []
+
+    for intf, desc_info in descriptions.items():
+        expected_dev, expected_port = _parse_description(desc_info['description'])
+
+        if intf not in lldp_neighbors:
+            issues.append(f'{intf}: LLDP无邻居(期望{expected_dev})')
+            continue
+
+        actual = lldp_neighbors[intf]
+        actual_dev = actual['device']
+        actual_port = actual['port']
+
+        # 设备名对比
+        if actual_dev.endswith('...'):
+            # Format C 截断名，前缀匹配
+            prefix = actual_dev.rstrip('.')
+            if not expected_dev.startswith(prefix) and not prefix.startswith(expected_dev):
+                issues.append(f'{intf}: 设备不匹配 期望{expected_dev} 实际{actual_dev}')
+        else:
+            if expected_dev != actual_dev:
+                issues.append(f'{intf}: 设备不匹配 期望{expected_dev} 实际{actual_dev}')
+
+    if not issues:
+        return '通过'
+    return '\n'.join(issues)
+
+
+# ============================================================
 # 检查项分发表：检查项名称 -> 对应函数
 # ============================================================
 _CHECKERS = {
@@ -442,6 +672,7 @@ _CHECKERS = {
     'mlag状态':            _check_mlag_status,
     'hash配置':            _check_hash,
     '告警检查':            _check_alarm_active,
+    '线路检查':            _check_cable,
 }
 
 
