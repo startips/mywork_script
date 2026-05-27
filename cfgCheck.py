@@ -11,8 +11,45 @@ cfgCheck.py - 华为交换机离线配置文件检查
     checkOptions(data, checkItems) - 调度器，按检查项分发到各 _check_xxx 函数
 """
 
-from interface import get_value, excel, CABLE_CHECK_CONFIG
+from interface import get_value, excel
+import os
+import sys
 import re
+import yaml
+
+
+# ============================================================
+# 加载 check_items.yaml（功能2 才会 import 本模块，此时才读文件）
+# ============================================================
+
+if getattr(sys, 'frozen', False):
+    _base_dir = os.path.dirname(sys.executable)
+else:
+    _base_dir = os.path.dirname(__file__)
+
+_yaml_path = os.path.join(_base_dir, 'read', 'check_items.yaml')
+with open(_yaml_path, 'r', encoding='utf-8') as _f:
+    _data = yaml.safe_load(_f)
+
+CHECK_ITEM_NAMES = tuple(_data['check_items'])
+
+
+def _make_check_option(*enabled_items):
+    enabled = set(enabled_items)
+    return {name: (1 if name in enabled else 0) for name in CHECK_ITEM_NAMES}
+
+
+DEVICE_TYPE_CONFIGS = {
+    type_name: _make_check_option(*items)
+    for type_name, items in _data['device_types'].items()
+}
+
+DEVICE_TYPE_PATTERNS = tuple(
+    (pattern, type_name)
+    for pattern, type_name in _data['device_patterns']
+)
+
+CABLE_CHECK_CONFIG = _data.get('cable_check', {})
 
 
 # ============================================================
@@ -55,6 +92,11 @@ def _load_version_patch_map():
             continue  # 跳过空行
 
     _VERSION_PATCH_MAP = map_result
+
+
+def get_check_title():
+    """返回功能2 Excel 报告的列头"""
+    return ['设备名', '设备类型', 'sysname', '管理IP', '型号'] + list(CHECK_ITEM_NAMES)
 
 def _get_device_model(fileTxt):
     """
@@ -107,21 +149,39 @@ def _match_model(model):
 _load_version_patch_map()
 
 
+def _returntype(name):
+    """
+    根据设备名称匹配设备类型，返回对应的检查项配置。
+
+    参数：
+        name: 设备文件名（不含后缀），如 'SZPX06R1H01U19-DCN-DC1_FB22-S_A'
+
+    返回：
+        dict，格式为 {'type': 'Spine', 'checkOption': {检查项: 0/1字典}}
+    """
+    for pattern, type_name in DEVICE_TYPE_PATTERNS:
+        if re.search(pattern, name, flags=re.I):
+            return {'type': type_name, 'checkOption': DEVICE_TYPE_CONFIGS[type_name].copy()}
+    return {'type': 'Other', 'checkOption': DEVICE_TYPE_CONFIGS['Other'].copy()}
+
+
 def deviceCheck(arg):  # 检查
     """
     设备检查入口函数。
 
-    读取 read/config/ 目录下的配置文件，调用 checkOptions 执行各项检查。
+    读取 read/config/ 目录下的配置文件，确定设备类型，调用 checkOptions 执行各项检查。
 
     参数：
-        arg: dict，包含 name（设备名）、type（设备类型）、filename（配置文件名）
-             以及 checkOption（33个检查项的 0/1 配置）
+        arg: dict，包含 name（设备名）、filename（配置文件名）
 
     返回：
         list，[设备名, 设备类型, sysname, 管理IP, 型号, 各项检查结果...]
     """
     logger = get_value('logger')
     data_local = arg
+    # 确定设备类型和检查项
+    dev_info = _returntype(data_local['name'])
+    data_local.update(dev_info)
     result = [data_local['name'], data_local['type']]
     try:  # 读取文件内容
         with open('read/config/%s' % data_local['filename'], 'r', encoding='utf-8', errors='ignore') as f:

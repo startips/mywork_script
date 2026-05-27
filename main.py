@@ -71,30 +71,8 @@ def oringinDataFormat():  # 原始数据分类
     read_info = []  # 结果
     for item in all_items:
         name = item.replace('.txt', '').replace('.log', '')
-        returnStr = returntype(name)
-        returnStr.update({'name': name, 'filename': item})
-        read_info.append(returnStr)
+        read_info.append({'name': name, 'filename': item})
     return read_info
-
-
-def returntype(name):  # 确定设备类型以及检查项
-    """
-    根据设备名称匹配设备类型，返回对应的检查项配置。
-
-    从 config.check_items 模块读取设备类型匹配规则和配置表，
-
-    参数：
-        name: 设备文件名（不含后缀），如 'SZPX06R1H01U19-DCN-DC1_FB22-S_A'
-
-    返回：
-        dict，格式为 {'type': 'Spine', 'checkOption': {33个检查项的0/1字典}}
-    """
-    from interface import DEVICE_TYPE_CONFIGS, DEVICE_TYPE_PATTERNS
-    for pattern, type_name in DEVICE_TYPE_PATTERNS:
-        if re.search(pattern, name, flags=re.I):
-            return {'type': type_name, 'checkOption': DEVICE_TYPE_CONFIGS[type_name].copy()}
-    # 未匹配时兜底返回 Other 类型
-    return {'type': 'Other', 'checkOption': DEVICE_TYPE_CONFIGS['Other'].copy()}
 
 
 def writeToExcel(filename, title, data):  # 写入数据到excel
@@ -175,11 +153,9 @@ def start_action():  # windows功能入口
             writeToExcel(savename, title, data)
             break
         if functionSelect == '2':  # 配置检查+状态采集
-            from interface import CHECK_ITEM_NAMES
-            title = (['设备名', '设备类型', 'sysname', '管理IP', '型号']
-                     + list(CHECK_ITEM_NAMES))  # 从配置表动态生成列头
+            from cfgCheck import deviceCheck, get_check_title
+            title = get_check_title()
             savename = 'compareResult'
-            from cfgCheck import deviceCheck
             data = funcAction1(oringinDataFormat(), savename, deviceCheck, 10)
             writeToExcel(savename, title, data)
             break
