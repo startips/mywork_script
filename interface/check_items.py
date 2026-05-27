@@ -18,7 +18,7 @@ import yaml
 # ============================================================
 
 if getattr(sys, 'frozen', False):
-    _base_dir = sys._MEIPASS
+    _base_dir = os.path.dirname(sys.executable)
 else:
     _base_dir = os.path.join(os.path.dirname(__file__), '..')
 

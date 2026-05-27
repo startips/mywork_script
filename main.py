@@ -210,4 +210,4 @@ def start_action():  # windows功能入口
 if __name__ == '__main__':
     start_action()
     # oringinDataFormat()
-# 打包命令pyinstaller -F -i images\favicon.ico .\main.py -n win_x64_main --collect-all grapheme --add-data "read\check_items.yaml;read" --add-data "read\compare_rules_v2.yaml;read" --clean
+# 打包命令pyinstaller -F -i images\favicon.ico .\main.py -n win_x64_main --collect-all grapheme --clean
