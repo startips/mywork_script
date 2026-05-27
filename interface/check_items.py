@@ -10,13 +10,19 @@
 """
 
 import os
+import sys
 import yaml
 
 # ============================================================
-# 加载 YAML
+# 加载 YAML（兼容 PyInstaller 打包）
 # ============================================================
 
-_yaml_path = os.path.join(os.path.dirname(__file__), '..', 'read', 'check_items.yaml')
+if getattr(sys, 'frozen', False):
+    _base_dir = sys._MEIPASS
+else:
+    _base_dir = os.path.join(os.path.dirname(__file__), '..')
+
+_yaml_path = os.path.join(_base_dir, 'read', 'check_items.yaml')
 
 with open(_yaml_path, 'r', encoding='utf-8') as _f:
     _data = yaml.safe_load(_f)
