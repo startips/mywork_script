@@ -263,6 +263,8 @@ class excel:  # Excel表格处理 只支持.xlsx格式
         for row in wsObj.iter_rows(min_row=2):  # 从第2行开始（跳过标题）
             for cell in row:
                 value = cell.value
+                if value is None:
+                    continue
                 # 规则
                 for key in ['未通过']:
                     if key in value:
