@@ -44,7 +44,7 @@ class deviceControl:  # 交换机登陆模块
                                  channel_timeout=10,  # 通道超时
                                  banner_timeout=10)  # 标题栏超时
                 self.ssh_shell = self.ssh.invoke_shell()  # 使用invoke是为了可以执行多条命令
-                self.ssh_shell.settimeout(1)  # tunnel超时
+                self.ssh_shell.settimeout(2)  # tunnel超时
                 return True
             except:
                 time.sleep(1)
@@ -63,23 +63,20 @@ class deviceControl:  # 交换机登陆模块
         par = re.compile(r'---- More ----')
         while True:
             data = ''
-            times = 0  # 循环次数叠加
-            while times <= 3:  # 取一次数据
+            while True:  # 取一次数据，收到空就跳出
                 try:
-                    rec = self.ssh_shell.recv(1024)
-                    if bool(rec) is False:
-                        raise ValueError
+                    rec = self.ssh_shell.recv(65536)  # 64KB缓冲区，减少recv次数
+                    if not rec:
+                        break
                     data += rec.decode('utf-8')
-                    times = 0
-                except:
-                    times += 1
-            if bool(data) is False:  # 获取的数据为空则跳出循环
+                except:  # 超时即认为本次数据收完
+                    break
+            if not data:  # 获取的数据为空则跳出循环
                 break
-            else:  # 判断是否有more关键字
-                endMark = par.search(data)
-                if endMark:
-                    self.ssh_shell.send(' ')
-                dataAll += data
+            endMark = par.search(data)
+            if endMark:
+                self.ssh_shell.send(' ')
+            dataAll += data
         return deleteUnknownStr(dataAll)
 
     def close(self):  # 关闭session
