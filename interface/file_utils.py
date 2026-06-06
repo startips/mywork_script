@@ -5,7 +5,6 @@
 file_utils.py - 文件读取工具模块
 
 提供 TXT/CSV 读取、目录创建功能。
-从原 connection.py 拆分而来。
 """
 
 import os

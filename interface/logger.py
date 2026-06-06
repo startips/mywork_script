@@ -5,7 +5,6 @@
 logger.py - 日志模块
 
 提供文件日志 + 控制台日志功能。
-从原 connection.py 拆分而来。
 """
 
 import time

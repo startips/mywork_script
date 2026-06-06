@@ -3,9 +3,7 @@
 
 """
 thread_pool.py - 线程池模块
-
 提供带进度条的并发执行功能。
-从原 connection.py 拆分而来。
 """
 
 from concurrent import futures

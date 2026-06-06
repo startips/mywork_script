@@ -5,7 +5,6 @@
 device_client.py - 设备连接模块（SSH/Telnet）
 
 提供设备登录、命令执行、数据接收功能。
-从原 connection.py 拆分而来。
 """
 
 import re

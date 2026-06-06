@@ -5,7 +5,6 @@
 excel_handler.py - Excel 表格处理模块
 
 仅支持 .xlsx 格式，提供 Excel 读写、样式设置功能。
-从原 connection.py 拆分而来。
 """
 
 import time
