@@ -105,7 +105,7 @@ class excel:  # Excel表格处理 只支持.xlsx格式
 
     def excelReadSheet(self, sheetnum=1, row=0, column=0, row_start=2, column_start=1):  # 读取一个sheet
         sheetnames = self.wb.sheetnames  # 获取sheets
-        if type(sheetnum) == int:
+        if isinstance(sheetnum, int):
             ws = self.wb[sheetnames[sheetnum - 1]]  # 打开第X个sheet
         else:
             ws = self.wb[sheetnum]  # 直接用名字打开表格

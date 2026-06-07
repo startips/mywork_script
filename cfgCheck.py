@@ -57,6 +57,31 @@ CABLE_CHECK_CONFIG = _data.get('cable_check', {})
 
 
 # ============================================================
+# 预编译正则（高频使用，避免每次检查重复编译）
+# ============================================================
+_RE_SYSNAME = re.compile(r'#\s*\n\s*sysname (\S+)\s*\n\s*#', re.IGNORECASE)
+_RE_METH_IP = re.compile(
+    r'interface MEth\S+\s*\n\s*'
+    r'description \S+\s*\n\s*'
+    r'ip binding vpn-instance \S+\s*\n\s*'
+    r'ip address (\d+\.\d+\.\d+\.\d+) \d+\.\d+\.\d+\.\d+',
+    re.IGNORECASE
+)
+_RE_HUAWEI_MODEL = re.compile(r'HUAWEI (\S+) (?:Routing Switch)?\s*uptime is', re.IGNORECASE)
+_RE_VERSION = re.compile(r'Version \S+ \(\S+ (\S+)\)')
+_RE_PATCH = re.compile(r'Patch Package Version\s?\:(\S+)')
+_RE_FLASH_DIR = re.compile(r'Directory of flash[\s\S]*?<', re.IGNORECASE)
+_RE_DEVICE_STATUS = re.compile(r'Device status:[\s\S]*?<', re.IGNORECASE)
+_RE_BGP_INFO = re.compile(r'BGP local router ID[\s\S]*?<', re.IGNORECASE)
+_RE_BGP_PEERS = re.compile(r'Total number of peers\s+\:\s+(\d+)', re.IGNORECASE)
+_RE_FEATURE = re.compile(r'FeatureName[\s\S]*?<(?!.*?:(?:display|dis)\s)', re.IGNORECASE)
+_RE_FAILED_CMD = re.compile(r'The number of failed commands is (\d+)', re.IGNORECASE)
+_RE_ESN = re.compile(r'ESN.*?:\s*(\w+)', re.IGNORECASE)
+_RE_ALARM_SECTION = re.compile(r'display alarm active[\s\S]*?<', re.IGNORECASE)
+_RE_ALARM_ENTRY = re.compile(r'\d+\s+0x[0-9a-fA-F]+\s+\S+\s+\d{4}-\d{2}-\d{2}')
+
+
+# ============================================================
 # 版本补丁对照表（启动时从 Excel 加载）
 # 读取 read/版本补丁.xlsx → 版本补丁推荐（季度）sheet →
 # 筛选 使用场景=新上线 → 建立 {网元类型: (版本信息, H1推荐补丁)} 映射
@@ -114,7 +139,7 @@ def _get_device_model(fileTxt):
     返回：
         str or None — 设备型号，未匹配到时返回 None
     """
-    m = re.search(r'HUAWEI (\S+) (?:Routing Switch)?\s*uptime is', fileTxt, re.IGNORECASE)
+    m = _RE_HUAWEI_MODEL.search(fileTxt)
     return m.group(1) if m else None
 
 
@@ -220,19 +245,13 @@ def checkOptions(fileTxt, checkItems):
     checkResult = []
 
     # ---- 固定提取项：sysname / 管理IP / 设备型号 ----
-    devSysnameMatch = re.search(r'#\s*\n\s*sysname (\S+)\s*\n\s*#', fileTxt, re.IGNORECASE)
+    devSysnameMatch = _RE_SYSNAME.search(fileTxt)
     checkResult.append(devSysnameMatch.group(1) if devSysnameMatch else '未匹配到')
 
-    devTypeMatch = re.search(
-        r'interface MEth\S+\s*\n\s*'
-        r'description \S+\s*\n\s*'
-        r'ip binding vpn-instance \S+\s*\n\s*'
-        r'ip address (\d+\.\d+\.\d+\.\d+) \d+\.\d+\.\d+\.\d+',
-        fileTxt, re.IGNORECASE
-    )
+    devTypeMatch = _RE_METH_IP.search(fileTxt)
     checkResult.append(devTypeMatch.group(1) if devTypeMatch else '未匹配到')
 
-    devIpMatch = re.search(r'HUAWEI (\S+) (?:Routing Switch)?\s*uptime is', fileTxt, re.IGNORECASE)
+    devIpMatch = _RE_HUAWEI_MODEL.search(fileTxt)
     checkResult.append(devIpMatch.group(1) if devIpMatch else '未匹配到')
 
     # ---- 遍历检查项配置表，分发到各检查函数 ----
@@ -270,7 +289,7 @@ def _check_version(fileTxt, checkItems):
     - 找不到对应型号 → 返回 '版本号-未知'
     - 采集不到版本号 → 返回 '未匹配到'
     """
-    matchVerinfo = re.findall(r'Version \S+ \(\S+ (\S+)\)', fileTxt)
+    matchVerinfo = _RE_VERSION.findall(fileTxt)
     collected = matchVerinfo[0] if matchVerinfo else '未匹配到'
 
     if collected == '未匹配到':
@@ -296,7 +315,7 @@ def _check_patch(fileTxt, checkItems):
     - 找不到对应型号 → 返回 '补丁号-未知'
     - 采集不到补丁号 → 返回 '未匹配到'
     """
-    matchPatInfo = re.findall(r'Patch Package Version\s?\:(\S+)', fileTxt)
+    matchPatInfo = _RE_PATCH.findall(fileTxt)
     collected = matchPatInfo[0] if matchPatInfo else '未匹配到'
 
     if collected == '未匹配到':
@@ -332,7 +351,7 @@ def _check_extra_files(fileTxt, checkItems):
         '未匹配到'    — 找不到 flash 目录信息或三项均为 0
         str           — 各类型文件的实际数量（如 'cc:2,pat:1,cfg:1'）
     """
-    matchDirInfo = re.search(r'Directory of flash[\s\S]*?<', fileTxt, re.IGNORECASE)
+    matchDirInfo = _RE_FLASH_DIR.search(fileTxt)
     if not matchDirInfo:
         return '未匹配到'
     dirInfo = matchDirInfo.group()
@@ -357,7 +376,7 @@ def _check_extra_files(fileTxt, checkItems):
 
 def _check_hardware(fileTxt, checkItems):
     """检查硬件设备状态（有无 Offline/Unregistered/Abnormal）"""
-    deviceInfo = re.search(r'Device status:[\s\S]*?<', fileTxt, re.IGNORECASE)
+    deviceInfo = _RE_DEVICE_STATUS.search(fileTxt)
     if not deviceInfo:
         return '未匹配到'
     statusStr = ['Offline', 'Unregistered', 'Abnormal']
@@ -381,10 +400,10 @@ def _check_open_ports(fileTxt, checkItems):
 
 def _check_bgp_neighbor(fileTxt, checkItems):
     """检查 BGP 邻居状态"""
-    bgpInfo = re.search(r'BGP local router ID[\s\S]*?<', fileTxt, re.IGNORECASE)
+    bgpInfo = _RE_BGP_INFO.search(fileTxt)
     if not bgpInfo:
         return '未匹配到'
-    bgpNum = re.findall(r'Total number of peers\s+\:\s+(\d+)', bgpInfo.group(), re.IGNORECASE)
+    bgpNum = _RE_BGP_PEERS.findall(bgpInfo.group())
     if not bgpNum:
         return '未匹配到'
     normalBgpNum = len(re.findall(
@@ -396,7 +415,7 @@ def _check_bgp_neighbor(fileTxt, checkItems):
 
 def _check_feature_software(fileTxt, checkItems):
     """检查 feature-software 状态"""
-    matchFeaInfo = re.search(r'FeatureName[\s\S]*?<', fileTxt)
+    matchFeaInfo = _RE_FEATURE.search(fileTxt)
     if not matchFeaInfo:
         return '未匹配到'
     featureInfo = re.findall(
@@ -409,7 +428,7 @@ def _check_feature_software(fileTxt, checkItems):
 
 def _check_failed_commands(fileTxt, checkItems):
     """检查配置回滚的失败命令数量"""
-    matchRecover = re.findall(r'The number of failed commands is (\d+)', fileTxt, re.IGNORECASE)
+    matchRecover = _RE_FAILED_CMD.findall(fileTxt)
     if not matchRecover:
         return '未匹配到'
     return '通过' if matchRecover[0] == '0' else matchRecover[0]
@@ -417,7 +436,7 @@ def _check_failed_commands(fileTxt, checkItems):
 
 def _check_esn(fileTxt, checkItems):
     """检查设备 ESN 序列号"""
-    esnInfo = re.search(r'ESN.*?:\s*(\w+)', fileTxt, re.IGNORECASE)
+    esnInfo = _RE_ESN.search(fileTxt)
     return esnInfo.group(1) if esnInfo else '未匹配到'
 
 
@@ -466,10 +485,7 @@ def _check_alarm_active(fileTxt, checkItems):
     #   display alarm active | no
     #   Sequence   AlarmId    Severity Date Time  Description
     #   （无告警数据行，只有表头）
-    alarmSection = re.search(
-        r'display alarm active[\s\S]*?<',  # 从 display alarm active 开始到下一个 <（命令提示符标记）
-        fileTxt, re.IGNORECASE
-    )
+    alarmSection = _RE_ALARM_SECTION.search(fileTxt)
     # 如果找不到 display alarm active 段，返回未匹配到
     if not alarmSection:
         return '未匹配到'
@@ -477,10 +493,7 @@ def _check_alarm_active(fileTxt, checkItems):
     alarmText = alarmSection.group()
     # 在回显区域中统计告警条目数量
     # 告警行特征：序号 + 16进制AlarmId + 严重级别 + 日期
-    alarmCount = len(re.findall(
-        r'\d+\s+0x[0-9a-fA-F]+\s+\S+\s+\d{4}-\d{2}-\d{2}',
-        alarmText
-    ))
+    alarmCount = len(_RE_ALARM_ENTRY.findall(alarmText))
 
     if alarmCount == 0:
         return '通过'
