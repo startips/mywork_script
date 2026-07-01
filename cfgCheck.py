@@ -554,6 +554,35 @@ _exclude_iface_pats = [
 _exclude_phy = set(CABLE_CHECK_CONFIG.get('exclude_phy', []))
 
 
+# ============================================================
+# 物理端口配置块解析（共享工具）
+# ============================================================
+
+# 匹配 interface \d+GE槽位/子卡/端口 ... # 的物理端口段，排除子接口
+_RE_PHY_PORT_BLOCK = re.compile(
+    r'interface (\d+GE\d+/\d+/\d+)\n([\s\S]*?)\n#', re.IGNORECASE
+)
+_RE_TRANSCEIVER = re.compile(r'device transceiver (\d+)GBASE', re.IGNORECASE)
+
+
+def _parse_phy_port_blocks(fileTxt):
+    """
+    提取配置文件中含 device transceiver 的物理端口配置块。
+
+    返回: [(接口名, body文本), ...]
+    排除子接口（\.xxx）和逻辑口。
+    """
+    matches = _RE_PHY_PORT_BLOCK.findall(fileTxt)
+    result = []
+    for name, body in matches:
+        # 只保留含 module transceiver 的端口
+        if 'device transceiver' in body:
+            result.append((name, body.strip()))
+    logger.debug('物理端口配置块解析完成: %d 个含模块的端口', len(result))
+    return result
+
+
+
 def _parse_description_section(fileTxt):
     """
     解析 display interface description 回显。
@@ -774,6 +803,53 @@ def _check_cable(fileTxt, checkItems):
 
 
 # ============================================================
+# 端口模块速率检查
+# ============================================================
+
+def _check_transceiver_speed(fileTxt, checkItems):
+    """
+    检查物理端口配置速率与实际插入模块速率是否匹配。
+
+    对每个含 device transceiver 的物理端口：
+    - 排除"无配置"端口（只有 shutdown 或 shutdown+device transceiver）
+    - 从接口名提取配置速率（\\d+GE → 数字）
+    - 从 device transceiver 提取模块实际速率（\\d+GBASE → 数字）
+    - 严格相等才算匹配
+
+    返回：
+        '通过'       — 全部匹配
+        '未匹配到'    — 无含模块的物理端口
+        str          — '不匹配N个: 接口名(配置G口插模块G) ...'
+    """
+    logger.debug('%s 开始端口模块速率检查', checkItems['name'])
+    ports = _parse_phy_port_blocks(fileTxt)
+    if not ports:
+        return '未匹配到'
+
+    mismatched = []
+    for name, body in ports:
+        # 排除"无配置"端口：去掉 shutdown 和 device transceiver 后无实质配置
+        cmds = set(line.strip() for line in body.split('\n') if line.strip())
+        meaningful = cmds - {'shutdown'} - {c for c in cmds if c.startswith('device transceiver')}
+        if not meaningful:
+            continue   # 端口未使用，跳过
+
+        # 接口名提取配置速率
+        cfg_match = re.match(r'(\d+)GE', name)
+        cfg_speed = cfg_match.group(1) if cfg_match else None
+        # transceiver 提取模块速率
+        mod_match = _RE_TRANSCEIVER.search(body)
+        mod_speed = mod_match.group(1) if mod_match else None
+
+        if cfg_speed and mod_speed and cfg_speed != mod_speed:
+            mismatched.append(f'{name}({cfg_speed}G口插{mod_speed}G)')
+
+    if not mismatched:
+        return '通过'
+    return f'不匹配{len(mismatched)}个: ' + ' '.join(mismatched)
+
+
+# ============================================================
 # 检查项分发表：检查项名称 -> 对应函数
 # ============================================================
 _CHECKERS = {
@@ -790,6 +866,7 @@ _CHECKERS = {
     'hash配置':            _check_hash,
     '告警检查':            _check_alarm_active,
     '线路检查':            _check_cable,
+    '端口模块速率检查':           _check_transceiver_speed,
 }
 
 
