@@ -17,8 +17,8 @@ compare_configs.py — 配置下发验证比对工具 v2
 
 import os
 import re
+import ipaddress
 from datetime import datetime
-
 import yaml
 import logging
 from interface.log_config import setup_logging
@@ -437,6 +437,59 @@ def normalize_passwords(config_data):
 # ============================================================
 # 6. SSH 密码套件比较（无序集合）
 # ============================================================
+
+# IPv6 地址匹配正则：至少含两个冒号，可带 /prefix
+# 用 [0-9a-fA-F]{0,4} 允许空段以匹配 :: 形式
+_IPV6_RE = re.compile(
+    r'(?<![0-9a-fA-F:])'                      # 前面不能紧跟十六进制或冒号（避免误匹配子串）
+    r'([0-9a-fA-F]{1,4}(?::[0-9a-fA-F]{0,4}){2,7})'
+    r'(/\d{1,3})?'                           # 可选前缀
+)
+
+
+def _norm_ipv6_in_line(line):
+    """将行内出现的 IPv6 地址归一化为压缩形式（compressed）。
+
+    解决预期配置与采集配置 IPv6 写法差异导致的误报：
+    - 前导零：0B05 vs B05、::0006 vs ::6
+    - 大小写：已被 _ci_diff 的 lowercase 处理，这里不关心
+
+    归一化示例：
+        2405:1fc0:0B05:3129::0006/126  →  2405:1fc0:b05:3129::6/126
+        2405:1FC0:10:2900:FFFF:FFFF:FFFF:FFFD/64 → 2405:1fc0:10:2900:ffff:ffff:ffff:fffd/64
+
+    实现策略：用 finditer 找所有候选 token（连续十六进制+冒号串，
+    至少含两个冒号），逐个尝试用 ipaddress.IPv6Address 解析。
+    解析成功才替换，失败原样保留，避免部分匹配导致畸形拼接。
+    """
+    tokens = re.findall(r'[0-9a-fA-F]{1,4}(?::[0-9a-fA-F]{0,4})+', line)
+    for tok in tokens:
+        try:
+            addr = ipaddress.IPv6Address(tok)
+        except ValueError:
+            continue   # 非法 IPv6，跳过
+        # 行内定位该 token（连同可能的 /prefix），用压缩形式替换
+        pattern = re.compile(r'(?<![0-9a-fA-F:])' + re.escape(tok) + r'(/\d{1,3})?')
+        line = pattern.sub(
+            lambda m: f'{addr.compressed}{m.group(1) or ""}',
+            line, count=1
+        )
+    return line
+
+
+def normalize_ipv6(config_data):
+    """对配置数据中所有行的 IPv6 地址做压缩归一化（两侧相同规则）。"""
+    result = {'global': [], 'sections': {}}
+    for line in config_data.get('global', []):
+        result['global'].append(_norm_ipv6_in_line(line))
+    for cat, sub in config_data.get('sections', {}).items():
+        result['sections'][cat] = {}
+        for h, lines in sub.items():
+            result['sections'][cat][h] = [_norm_ipv6_in_line(l) for l in lines]
+    logger.debug('IPv6 归一化完成: 全局行 %d, 段落分类 %d',
+                 len(result['global']), len(result['sections']))
+    return result
+
 
 def _parse_ssh_cipher_line(line):
     """提取 SSH cipher/hmac 行的套件集合"""
@@ -864,6 +917,10 @@ def process_one_device(dev_name, cfg_path, log_path, rules):
     # 密码归一化
     intended = normalize_passwords(intended)
     collected = normalize_passwords(collected)
+
+    # IPv6 地址归一化（压缩形式，消除前导零写法差异）
+    intended = normalize_ipv6(intended)
+    collected = normalize_ipv6(collected)
 
     # 对比
     diff = compare_configs(intended, collected, model, version)
