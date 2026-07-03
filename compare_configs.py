@@ -119,7 +119,9 @@ def match_devices(intended_dir, collected_dir):
     all_devices = set(intended_files.keys()) | set(collected_files.keys())
     matched, only_intended, only_collected = [], [], []
 
-    for dev_name in all_devices:
+    # 按设备名字典序遍历，保证多次运行报告顺序稳定一致（便于跨报告逐行对比）。
+    # set 的遍历顺序受 PYTHONHASHSEED 影响（默认每次随机），不排序会导致报告设备顺序每次不同。
+    for dev_name in sorted(all_devices):
         cfg = intended_files.get(dev_name)
         log = collected_files.get(dev_name)
         if cfg and log:
