@@ -7,13 +7,12 @@
 用法:
   python generate_config_web.py /path/to/params.xlsx
   python generate_config_web.py /path/to/params.xlsx --vpn 配置服务器
-  python generate_config_web.py /path/to/params.xlsx --no-vpn     # 不连/不关 VPN
-  python generate_config_web.py /path/to/params.xlsx --keep-vpn   # 连上，结束后不关
+  python generate_config_web.py /path/to/params.xlsx --no-vpn   # 不连/不关 VPN
   python generate_config_web.py /path/to/params.xlsx --headed --slow 200
 
 下载默认目录: /Users/shadowx/Documents/招行/配置生成/原始配置
 文件名: Excel文件名_YYYYMMDD.zip（如 网络设备参数_20260714.zip），重名覆盖
-默认会在任务结束后断开 L2TP（--no-vpn 不连不关；--keep-vpn 连上不关）
+任务结束后会询问是否断开 L2TP（--no-vpn 时不连也不问）
 """
 
 from __future__ import annotations
@@ -94,17 +93,9 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="跳过 VPN 检查/连接（已手动连上时可用）",
     )
-    p.add_argument(
-        "--keep-vpn",
-        action="store_true",
-        help="连接 VPN 后任务结束不断开（与 --no-vpn 互斥）",
-    )
     p.add_argument("--headed", action="store_true", help="有界面运行（默认无头）")
     p.add_argument("--slow", type=int, default=0, help="每步延迟毫秒（如 --slow 300）")
-    args = p.parse_args()
-    if args.no_vpn and args.keep_vpn:
-        p.error("--no-vpn 与 --keep-vpn 不能同时使用")
-    return args
+    return p.parse_args()
 
 
 def _run(cmd: list[str], timeout: int = 15) -> subprocess.CompletedProcess[str]:
@@ -167,6 +158,21 @@ def stop_vpn(name: str, timeout_s: int = 20) -> None:
         time.sleep(0.5)
 
     print(f"[vpn] 警告: 等待断开超时，当前状态={vpn_status(name)}", file=sys.stderr)
+
+
+def confirm_stop_vpn(name: str) -> bool:
+    """
+    任务结束后询问是否断开 VPN。
+    回车/Y=关，n=保留；非交互（无 TTY）默认关。
+    """
+    if not sys.stdin.isatty():
+        print(f"[vpn] 非交互环境，默认断开「{name}」")
+        return True
+    try:
+        ans = input(f"[vpn] 任务结束，是否关闭 VPN「{name}」？[Y/n] ").strip().lower()
+    except EOFError:
+        return True
+    return ans in ("", "y", "yes", "是")
 
 
 def wait_vpn_connected(name: str, timeout_s: int = VPN_CONNECT_TIMEOUT) -> None:
@@ -702,7 +708,6 @@ def main() -> int:
     print(f"[info] 下载目录 = {out_dir}")
 
     manage_vpn = not args.no_vpn
-    keep_vpn = args.keep_vpn
     exit_code = 1
 
     try:
@@ -790,15 +795,16 @@ def main() -> int:
                 context.close()
                 browser.close()
     finally:
-        # 默认断开 L2TP；--no-vpn 不碰；--keep-vpn 连上后保留
-        if manage_vpn and not keep_vpn:
-            print(f"[7/6] 任务结束，关闭 VPN「{args.vpn}」…")
-            try:
-                stop_vpn(args.vpn)
-            except Exception as e:
-                print(f"[vpn] 断开时出错: {e}", file=sys.stderr)
-        elif manage_vpn and keep_vpn:
-            print(f"[7/6] 已指定 --keep-vpn，保留 VPN「{args.vpn}」连接")
+        # 任务结束询问是否断开 L2TP（--no-vpn 不碰）
+        if manage_vpn:
+            if confirm_stop_vpn(args.vpn):
+                print(f"[7/6] 关闭 VPN「{args.vpn}」…")
+                try:
+                    stop_vpn(args.vpn)
+                except Exception as e:
+                    print(f"[vpn] 断开时出错: {e}", file=sys.stderr)
+            else:
+                print(f"[7/6] 按选择保留 VPN「{args.vpn}」连接")
 
     return exit_code
 
