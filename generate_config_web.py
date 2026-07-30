@@ -2,7 +2,7 @@
 """
 自动化：网络设备配置生成 Web 平台（NiceGUI）
 流程：连接 L2TP VPN → 打开页面 → 配置生成 → 上传 Excel → 勾选 ZIP
-      → 开始生成 → 识别日志框报错 → 无错才下载 ZIP
+      → 开始生成 → 识别日志框报错 → 无错才下载 ZIP → 解压到 read/config_intended
 
 用法:
   python generate_config_web.py /path/to/params.xlsx
@@ -12,6 +12,7 @@
 
 下载默认目录: /Users/shadowx/Documents/招行/配置生成/原始配置
 文件名: Excel文件名_YYYYMMDD.zip（如 网络设备参数_20260714.zip），重名覆盖
+下载成功后默认解压到: read/config_intended（同名覆盖）
 任务结束后会询问是否断开 L2TP（--no-vpn 时不连也不问）
 """
 
@@ -24,6 +25,7 @@ import sys
 import time
 import urllib.error
 import urllib.request
+import zipfile
 from pathlib import Path
 
 from playwright.sync_api import (
@@ -36,13 +38,17 @@ DEFAULT_URL = "http://192.168.30.5:8081/"
 DEFAULT_TIMEOUT_MS = 60_000
 # 页面打开单独更长（VPN 下 NiceGUI 首屏慢）
 PAGE_GOTO_TIMEOUT_MS = 120_000
-DEFAULT_GEN_TIMEOUT = 600
+DEFAULT_GEN_TIMEOUT = 60
 # 系统自带 L2TP 服务名（scutil --nc list / 网络设置里可见）
 DEFAULT_VPN_NAME = "配置服务器"
 VPN_CONNECT_TIMEOUT = 45
 DOWNLOAD_TIMEOUT_MS = 90_000
 # 下载默认目录与命名：配置+日期，如 配置20260710.zip
 DEFAULT_OUT_DIR = Path("/Users/shadowx/Documents/招行/配置生成/原始配置")
+# 下载 ZIP 后解压目标（功能4 比对用的预期配置目录）
+DEFAULT_EXTRACT_DIR = Path(
+    "/Users/shadowx/PycharmProjects/mywork_script/read/config_intended"
+)
 
 # 运行日志框 / 通知里视为失败
 HARD_ERROR = re.compile(
@@ -76,6 +82,17 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         default=DEFAULT_OUT_DIR,
         help=f"ZIP 下载目录（默认 {DEFAULT_OUT_DIR}）；文件名为 Excel文件名_YYYYMMDD.zip，重名覆盖",
+    )
+    p.add_argument(
+        "--extract-dir",
+        type=Path,
+        default=DEFAULT_EXTRACT_DIR,
+        help=f"下载后解压目录（默认 {DEFAULT_EXTRACT_DIR}）；同名覆盖",
+    )
+    p.add_argument(
+        "--no-extract",
+        action="store_true",
+        help="下载后不解压",
     )
     p.add_argument(
         "--timeout",
@@ -530,7 +547,7 @@ def wait_generation(
     点击「开始生成」之后：持续识别上方/日志框内容。
     返回 (success, message, last_status)。
     报错时 success=False，调用方不得再点「下载ZIP」。
-    require_zip=True 时必须等到「配置文件已打包为zip」。
+    require_zip=True 时必须等到「配置文件已打包为zip」（超时无报错则强行进入下一步导出）。
     """
     deadline = time.time() + timeout_s
     last_status: dict = {}
@@ -538,10 +555,12 @@ def wait_generation(
     saw_start = False
     saw_zip_false = False
     stable_ok = 0
+    start_time = time.time()
+    last_heartbeat = start_time
 
     print("[info] 开始识别运行日志框 / 进度 / 通知…")
     if require_zip:
-        print("[info] 已要求 ZIP：将等待日志出现「配置文件已打包为zip」后再下载")
+        print("[info] 已要求 ZIP：将等待日志出现「配置文件已打包为zip」或超时后直接尝试导出")
 
     while time.time() < deadline:
         status = read_status_panel(page)
@@ -554,6 +573,14 @@ def wait_generation(
             last_log_len = len(log)
             print("[status] 日志框有更新:")
             print(format_status_snapshot(status))
+            last_heartbeat = time.time()
+        else:
+            # 日志无更新时，每 15 秒打印心跳日志
+            now = time.time()
+            if now - last_heartbeat >= 15:
+                elapsed = int(now - start_time)
+                print(f"[info] 等待日志输出/打包中… (已等待 {elapsed}s / 超时上限 {timeout_s}s)")
+                last_heartbeat = now
 
         if STARTED_PATTERNS.search(log) or any(
             "已启动" in n for n in (status.get("notifications") or [])
@@ -592,17 +619,25 @@ def wait_generation(
 
         page.wait_for_timeout(1000)
 
-    hint = "（日志框未见启动信息）" if not saw_start else ""
-    if require_zip and saw_zip_false:
-        hint += "（日志显示 ZIP文件下载标志=False，请检查勾选是否被点成关闭）"
-    if require_zip and not ZIP_READY_PATTERNS.search(last_status.get("log") or ""):
-        hint += "（未出现「配置文件已打包为zip」）"
+    # --- 超时后的判断逻辑 ---
+    err = panel_has_error(last_status)
+    if err:
+        snap = format_status_snapshot(last_status)
+        return (
+            False,
+            f"等待超时（{timeout_s}s）且日志框检测到报错\n{err}\n{snap}",
+            last_status,
+        )
+
+    # 无明确报错：即使超时也直接执行下一步导出 ZIP
     snap = format_status_snapshot(last_status)
+    print(f"[warn] 等待日志超时（{timeout_s}s），但未检测到报错，直接执行下一步导出 ZIP")
     return (
-        False,
-        f"等待超时（{timeout_s}s）{hint}\n{snap}",
+        True,
+        f"等待超时（{timeout_s}s），日志无报错，直接执行下一步导出 ZIP\n{snap}",
         last_status,
     )
+
 
 def download_button_ready(page) -> bool:
     """下载 ZIP 按钮是否可点（报错时通常仍显示但不应点；再加一层保险）。"""
@@ -625,20 +660,26 @@ def download_button_ready(page) -> bool:
         return False
 
 
-def download_zip(page, out_dir: Path, excel_name: str = "") -> Path:
+def download_zip(
+    page, out_dir: Path, excel_name: str = "", allow_no_zip_pattern: bool = True
+) -> Path:
     """
-    仅在调用方已确认「已打包为zip」后调用。
-    按钮文案为「下载ZIP」（中间可能无空格）。
+    点击「下载ZIP」。
+    - 若 allow_no_zip_pattern=True（默认），即使日志中未明确出现「配置文件已打包为zip」，只要无报错也尝试点击下载。
     """
     status = read_status_panel(page)
     err = panel_has_error(status)
     if err:
         raise RuntimeError(f"下载前日志框出现报错，取消下载:\n{err}")
+
     if not ZIP_READY_PATTERNS.search(status.get("log") or ""):
-        raise RuntimeError(
-            "日志中未见「配置文件已打包为zip」，取消下载。"
-            "请确认已勾选 ZIP文件下载 且生成已完成。"
-        )
+        if not allow_no_zip_pattern:
+            raise RuntimeError(
+                "日志中未见「配置文件已打包为zip」，取消下载。"
+                "请确认已勾选 ZIP文件下载 且生成已完成。"
+            )
+        else:
+            print("[warn] 日志中未见「配置文件已打包为zip」，但因无报错，直接尝试点击「下载ZIP」…")
 
     btn = page.locator(".q-btn").filter(has_text=re.compile(r"下载\s*ZIP", re.I))
     if btn.count() == 0:
@@ -679,6 +720,52 @@ def download_zip(page, out_dir: Path, excel_name: str = "") -> Path:
     print(f"[ok] ZIP 大小: {dest.stat().st_size} bytes")
     print(f"[ok] 已保存为: {dest}")
     return dest
+
+
+def extract_zip(zip_path: Path, extract_dir: Path) -> list[Path]:
+    """
+    将 ZIP 解压到 extract_dir。
+    - 扁平成员（xxx.cfg）直接落到目标目录
+    - 带目录的成员保留相对路径
+    - 同名覆盖；拒绝 zip-slip（跳出目标目录）
+    返回写出的文件路径列表。
+    """
+    if not zip_path.is_file():
+        raise RuntimeError(f"ZIP 不存在: {zip_path}")
+
+    extract_dir = extract_dir.expanduser().resolve()
+    extract_dir.mkdir(parents=True, exist_ok=True)
+
+    written: list[Path] = []
+    with zipfile.ZipFile(zip_path, "r") as zf:
+        for info in zf.infolist():
+            name = info.filename.replace("\\", "/")
+            # 跳过目录项
+            if not name or name.endswith("/"):
+                continue
+            # 去掉 zip 内前导 ./ 与绝对路径感
+            rel = Path(name)
+            if rel.is_absolute() or ".." in rel.parts:
+                raise RuntimeError(f"ZIP 含非法路径，拒绝解压: {name}")
+
+            dest = (extract_dir / rel).resolve()
+            try:
+                dest.relative_to(extract_dir)
+            except ValueError as e:
+                raise RuntimeError(f"ZIP 路径越界，拒绝解压: {name}") from e
+
+            dest.parent.mkdir(parents=True, exist_ok=True)
+            with zf.open(info, "r") as src, open(dest, "wb") as out:
+                out.write(src.read())
+            written.append(dest)
+            print(f"[ok] 解压: {dest.name} -> {dest}")
+
+    if not written:
+        raise RuntimeError(f"ZIP 内无文件可解压: {zip_path}")
+    print(f"[ok] 共解压 {len(written)} 个文件到 {extract_dir}")
+    return written
+
+
 def open_page(page, url: str) -> None:
     """VPN 下页面加载可能很慢，分策略打开。"""
     last_err: Exception | None = None
@@ -706,21 +793,26 @@ def main() -> int:
     print(f"[info] URL   = {args.url}")
     print(f"[info] Excel = {excel}")
     print(f"[info] 下载目录 = {out_dir}")
+    extract_dir = args.extract_dir.expanduser().resolve()
+    if args.no_extract:
+        print("[info] 解压 = 跳过 (--no-extract)")
+    else:
+        print(f"[info] 解压目录 = {extract_dir}")
 
     manage_vpn = not args.no_vpn
     exit_code = 1
 
     try:
-        # 0) 先连系统 L2TP，否则 192.168.30.5 不可达
+        # 1/8) 先连系统 L2TP，否则 192.168.30.5 不可达
         if manage_vpn:
-            print(f"[0/6] 检查/连接 VPN「{args.vpn}」…")
+            print(f"[1/8] 检查/连接 VPN「{args.vpn}」…")
             try:
                 ensure_vpn(args.vpn, args.url)
             except Exception as e:
                 print(f"[err] VPN: {e}", file=sys.stderr)
                 return 3
         else:
-            print("[0/6] 已指定 --no-vpn，跳过连接与断开 VPN")
+            print("[1/8] 已指定 --no-vpn，跳过连接与断开 VPN")
 
         with sync_playwright() as p:
             try:
@@ -742,22 +834,22 @@ def main() -> int:
             page.set_default_timeout(DEFAULT_TIMEOUT_MS)
 
             try:
-                print("[1/6] 打开页面…")
+                print("[2/8] 打开页面…")
                 open_page(page, args.url)
 
-                print("[2/6] 进入「配置生成」…")
+                print("[3/8] 进入「配置生成」…")
                 open_config_tab(page)
 
-                print("[3/6] 上传 Excel 并勾选 ZIP…")
+                print("[4/8] 上传 Excel 并勾选 ZIP…")
                 upload_excel(page, excel)
                 ensure_zip_checkbox(page)
 
-                print("[4/6] 点击「开始生成」…")
+                print("[5/8] 点击「开始生成」…")
                 ensure_panel(page)
                 page.get_by_role("button", name=re.compile(r"^开始生成$")).click()
                 page.wait_for_timeout(1000)
 
-                print("[5/6] 识别运行日志框：等打包完成 / 判错…")
+                print("[6/8] 识别运行日志框：等打包完成 / 判错…")
                 ok, msg, status = wait_generation(page, args.timeout, require_zip=True)
                 print(f"[{'ok' if ok else 'err'}] {msg.splitlines()[0]}")
                 if not ok:
@@ -777,10 +869,17 @@ def main() -> int:
                     print(f"[info] 截图: {shot}", file=sys.stderr)
                     exit_code = 1
                 else:
-                    print("[6/6] 日志已确认 ZIP 打包完成，点击「下载ZIP」…")
+                    print("[7/8] 日志已确认 ZIP 打包完成，点击「下载ZIP」…")
                     dest = download_zip(page, out_dir, excel.name)
                     print(f"[done] 已保存: {dest}")
-                    exit_code = 0
+                    if args.no_extract:
+                        print("[8/8] 已指定 --no-extract，跳过解压")
+                        exit_code = 0
+                    else:
+                        print(f"[8/8] 解压 ZIP → {extract_dir} …")
+                        files = extract_zip(dest, extract_dir)
+                        print(f"[done] 已解压 {len(files)} 个文件")
+                        exit_code = 0
 
             except Exception as e:
                 print(f"[err] {type(e).__name__}: {e}", file=sys.stderr)
@@ -798,13 +897,13 @@ def main() -> int:
         # 任务结束询问是否断开 L2TP（--no-vpn 不碰）
         if manage_vpn:
             if confirm_stop_vpn(args.vpn):
-                print(f"[7/6] 关闭 VPN「{args.vpn}」…")
+                print(f"[vpn] 关闭 VPN「{args.vpn}」…")
                 try:
                     stop_vpn(args.vpn)
                 except Exception as e:
                     print(f"[vpn] 断开时出错: {e}", file=sys.stderr)
             else:
-                print(f"[7/6] 按选择保留 VPN「{args.vpn}」连接")
+                print(f"[vpn] 按选择保留 VPN「{args.vpn}」连接")
 
     return exit_code
 
