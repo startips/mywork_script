@@ -99,7 +99,7 @@ ignore:
     - '^device board'    #设备自动生成
     - '^device card'     #设备自动生成
     - '^capwap dtls' #无线配置
-    - '^capwap unknown-unicast'#无线配置
+    - '^capwap unknown-unicast' #无线配置
     - '^dragonfly profile default' #刷入不会显示
 
   sections:
