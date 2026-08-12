@@ -1,2 +1,45 @@
-###1需要此配置,2仅匹配,3自定义
-The number of failed commands is 4[\s\S]*?<,失败命令配置,1
+# 基础服务与安全禁用项
+telnet server disable,禁用Telnet服务,1
+undo telnet server-source all-interface,禁用Telnet全局接口监听,1
+undo ftp server source all-interface,禁用FTP全局接口监听,1
+ntp server source-interface all disable,禁用NTP全局源监听,1
+
+# 生成树协议(STP)安全规范
+stp mode rstp,STP模式为RSTP,1
+stp bpdu-protection,开启STP BPDU保护,1
+stp tc-protection,开启STP TC保护,1
+stp v-stp enable,开启V-STP,1
+
+# 防攻击与漂移检测
+arp ip-conflict-detect enable,开启ARP IP冲突检测,1
+mac-address flapping detection security-level low,开启MAC漂移检测,1
+mac-address flapping periodical trap enable,开启MAC漂移周期告警,1
+
+# SSH/STelnet安全配置
+stelnet server enable,开启STelnet服务,1
+ssh server rsa-key min-length 3072,SSH RSA最小密钥长度3072,1
+ssh server-source all-interface,开启SSH全局接口监听,1
+ssh authorization-type default aaa,SSH默认AAA授权,1
+ssh server dh-exchange min-len 2048,SSH DH交换最小长度2048,1
+
+# SNMP管理与安全配置
+snmp-agent sys-info version v2c v3,SNMP版本限定v2c/v3,1
+snmp-agent protocol source-status all-interface,SNMP协议源端口监听开启,1
+undo snmp-agent proxy protocol source-status all-interface,禁用SNMP代理协议源监听,1
+snmp-agent community complexity-check disable,禁用SNMP团体字复杂度检查,1
+snmp-agent usm-user password complexity-check disable,禁用SNMP USM密码复杂度检查,1
+
+# 链路发现与网络特性
+lldp enable,开启LLDP链路发现协议,1
+dcb pfc,开启DCB PFC,1
+
+# M-LAG/DFS组规范
+dfs-group 1\b,配置DFS Group 1,1
+m-lag up-delay 90\b,M-LAG上行延迟90秒,1
+
+# 账号与VTY终端安全
+local-user admin service-type terminal ssh,admin服务类型限制SSH/Terminal,1
+local-user nmsuser service-type terminal ssh,nmsuser服务类型限制SSH/Terminal,1
+user-interface maximum-vty 21,VTY最大连接数21,1
+protocol inbound ssh,VTY入方向只允许SSH,1
+
