@@ -7,7 +7,7 @@ import time
 import os
 import sys
 from alive_progress import alive_bar
-from interface import excel, autoThreadingPool, readTxt
+from interface import excel, autoThreadingPool, readTxtGrouped
 from interface.log_config import setup_logging
 
 logger = logging.getLogger(__name__)
@@ -124,7 +124,8 @@ def start_action():  # windows功能入口
         '1.在线配置检查（根据keyWords.txt里的关键字）\n'
         '2.采集配置文件状态检查\n'
         '3.下发配置\n'
-        '4.配置下发验证比对（预期 vs 采集）')
+        '4.配置下发验证比对（预期 vs 采集）\n'
+        '5.离线配置检查（根据keyWords.txt里的关键字）')
     while True:
         if 'Linux' in platform.system():
             import sys
@@ -134,10 +135,9 @@ def start_action():  # windows功能入口
         if functionSelect == '1':
             fileName = 'devices_ip.xlsx'
             title = ['IP', 'Description', 'PingStatus(ms)', 'accessMode']  # 保存的sheet标题
-            readInfo = readTxt('read/keyWords.txt')  # 读取匹配关键字用作title
-            for i in readInfo:  # 更新title
-                if i.split(',')[1] not in title:
-                    title.append(i.split(',')[1])
+            groups = readTxtGrouped(os.path.join(_base_dir, 'read', 'keyWords.txt'))
+            for g in groups:
+                title.append(g['name'])
             savename = 'checkConfig'
             print('1).确认IP等信息已填入read\\devices_ip.xlsx\n'
                   '2).确认检查关键字已填入read\\keyWords.txt\n'
@@ -170,6 +170,18 @@ def start_action():  # windows功能入口
         if functionSelect == '4':
             from compare_configs import main as compare_main
             compare_main()
+            break
+        if functionSelect == '5':
+            title = ['设备名']  # 保存的sheet标题
+            groups = readTxtGrouped(os.path.join(_base_dir, 'read', 'keyWords.txt'))
+            for g in groups:
+                title.append(g['name'])
+            savename = 'checkConfigOffline'
+            print('1).确认配置文件已填入read\\config目录\n'
+                  '2).确认检查关键字已填入read\\keyWords.txt')
+            from checkConfigOffline import deviceCheck
+            data = funcAction(deviceCheck, savename, data=oringinDataFormat(), worker=10)
+            writeToExcel(savename, title, data)
             break
         else:
             print('输入错误请重新输入')

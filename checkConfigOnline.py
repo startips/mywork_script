@@ -3,7 +3,7 @@
 import logging
 import os
 import sys
-from interface import deviceControl_auto, ping_check, revData_error, readTxt
+from interface import deviceControl_auto, ping_check, revData_error, readTxtGrouped
 import re
 
 logger = logging.getLogger(__name__)
@@ -17,37 +17,30 @@ else:
 
 def infoDeal(data):  # 数据处理 返回list
     logger.info('开始处理配置数据...')
-    data_local = data
-    result_dic = {}
     result = []
-    readInfo = readTxt(os.path.join(_base_dir, 'read', 'keyWords.txt'))  # 读取匹配关键字
-    logger.info(f'成功加载关键字 {len(readInfo)} 条')
-    for i in readInfo:
-        cell = i.split(',')
-        result_dic.update({cell[1]: ''})
-    revInfo = revData_error(data_local['dis current-configuration'])  # 判断是否有命令执行错误
+    groups = readTxtGrouped(os.path.join(_base_dir, 'read', 'keyWords.txt'))
+    logger.info(f'成功加载 {len(groups)} 个检查分组')
+    revInfo = revData_error(data['dis current-configuration'])  # 判断是否有命令执行错误
     if revInfo == 'NULL':
-        for info in readInfo:
-            keywords = info.split(',')
-            configStr = re.search(r'%s' % keywords[0], data_local['dis current-configuration'], re.IGNORECASE)
-            if configStr:
-                if keywords[2] == '0':
-                    checkRes = f'多余\'{keywords[1]}\':{keywords[0]}\n'
-                    result_dic.update({keywords[1]: result_dic[keywords[1]] + checkRes})
-                    logger.warning(f'发现多余配置: 分类={keywords[1]}, 关键字={keywords[0]}')
+        for group in groups:
+            issues = []
+            for kw in group['keywords']:
+                configStr = re.search(r'%s' % kw['pattern'], data['dis current-configuration'], re.IGNORECASE)
+                if configStr:
+                    if kw['flag'] == '0':
+                        issues.append(f"多余'{kw['category']}':{kw['pattern']}")
+                        logger.warning(f'发现多余配置: 分组={group["name"]}, 关键字={kw["pattern"]}')
+                else:
+                    if kw['flag'] == '1':
+                        issues.append(f"缺少'{kw['category']}':{kw['pattern']}")
+                        logger.warning(f'发现缺少配置: 分组={group["name"]}, 关键字={kw["pattern"]}')
+            if issues:
+                result.append('\n'.join(issues))
             else:
-                if keywords[2] == '1':
-                    checkRes = f'缺少\'{keywords[1]}\':{keywords[0]}\n'
-                    result_dic.update({keywords[1]: result_dic[keywords[1]] + checkRes})
-                    logger.warning(f'发现缺少配置: 分类={keywords[1]}, 关键字={keywords[0]}')
-        for key in result_dic:
-            if result_dic[key] == '':
-                result_dic.update({key: '无不合规项'})
+                result.append('无不合规项')
     else:
         logger.error(f'命令执行报错: {revInfo}')
         result.append(revInfo)
-    for key in result_dic:  # 转换到list
-        result.append(result_dic[key])
     logger.info(f'配置数据处理完成，返回 {len(result)} 项结果')
     return result
 

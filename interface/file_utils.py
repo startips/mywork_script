@@ -24,6 +24,31 @@ def readTxt(filename):  # 读取TXT 返回list 忽略#号
     return readReturn
 
 
+def readTxtGrouped(filename):
+    """读取TXT，按#注释行分组。返回 [{name, keywords:[{pattern, category, flag}]}]"""
+    groups = []
+    current_group = None
+    with open(filename, 'r', encoding='utf-8') as f:
+        for line in f:
+            s = line.strip()
+            if not s:
+                continue
+            if s.startswith('#'):
+                group_name = s.lstrip('#').strip()
+                if group_name:
+                    current_group = {'name': group_name, 'keywords': []}
+                    groups.append(current_group)
+            elif current_group is not None and ',' in s:
+                parts = s.split(',')
+                if len(parts) >= 3:
+                    current_group['keywords'].append({
+                        'pattern': parts[0],
+                        'category': parts[1],
+                        'flag': parts[2],
+                    })
+    return groups
+
+
 def readCsv(filename):  # 读取CSV文件返回list
     result = []
     with open(filename, mode="r") as f:

@@ -20,7 +20,7 @@ from .log_config import setup_logging
 from .thread_pool import autoThreadingPool
 
 # 文件工具
-from .file_utils import readTxt, readCsv, makeDir
+from .file_utils import readTxt, readTxtGrouped, readCsv, makeDir
 
 # 网络工具
 from .bitFunctions import ping_check, passwdinput, revData_error
@@ -35,7 +35,7 @@ __all__ = [
     # 线程池
     'autoThreadingPool',
     # 文件工具
-    'readTxt', 'readCsv', 'makeDir',
+    'readTxt', 'readTxtGrouped', 'readCsv', 'makeDir',
     # 网络工具
     'ping_check', 'passwdinput', 'revData_error',
 ]
